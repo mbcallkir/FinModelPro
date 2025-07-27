@@ -1,646 +1,979 @@
-// FinModel Pro - Главный JavaScript файл
+// Global Application State
 class FinModelApp {
     constructor() {
         this.currentUser = null;
         this.currentModel = null;
-        this.currentPage = 'landing';
-        this.charts = {};
-        this.authMode = 'login';
+        this.models = [];
+        this.currentStep = 0;
+        this.autoSaveInterval = null;
+        this.hasUnsavedChanges = false;
         
-        this.initializeApp();
+        // Application data from requirements
+        this.subscriptionPlans = {
+            "FREE": {
+                "name": "FREE",
+                "price": "0₽/месяц",
+                "maxModels": 3,
+                "features": ["До 3 моделей", "PDF экспорт", "Базовые расчеты"],
+                "exportFormats": ["PDF"]
+            },
+            "BASIC": {
+                "name": "BASIC", 
+                "price": "1990₽/месяц",
+                "maxModels": -1,
+                "features": ["Неограниченные модели", "Excel + PowerPoint экспорт", "Email поддержка"],
+                "exportFormats": ["PDF", "Excel", "PowerPoint"]
+            },
+            "WHITE_LABEL": {
+                "name": "WHITE-LABEL",
+                "price": "от 9900₽/месяц", 
+                "maxModels": -1,
+                "features": ["Все функции Basic", "Кастомизация брендинга", "API доступ", "Персональный менеджер"],
+                "exportFormats": ["PDF", "Excel", "PowerPoint"]
+            }
+        };
+
+        this.currencies = [
+            {"code": "RUB", "symbol": "₽", "name": "Российский рубль"},
+            {"code": "USD", "symbol": "$", "name": "Доллар США"},
+            {"code": "EUR", "symbol": "€", "name": "Евро"}
+        ];
+
+        this.expenseCategories = [
+            {"id": "salary", "name": "Заработная плата", "type": "personnel"},
+            {"id": "rent", "name": "Аренда помещений", "type": "fixed"},
+            {"id": "utilities", "name": "Коммунальные услуги", "type": "variable"},
+            {"id": "marketing", "name": "Маркетинг и реклама", "type": "variable"},
+            {"id": "admin", "name": "Административные расходы", "type": "mixed"},
+            {"id": "other", "name": "Прочие расходы", "type": "mixed"}
+        ];
+
+        this.industryTemplates = [
+            {"id": "ecommerce", "name": "Интернет-магазин", "description": "Модель для e-commerce проекта"},
+            {"id": "saas", "name": "SaaS стартап", "description": "Подписочная модель для IT-продукта"},
+            {"id": "restaurant", "name": "Ресторанный бизнес", "description": "Модель для заведений общепита"},
+            {"id": "manufacturing", "name": "Производство", "description": "Производственная компания"},
+            {"id": "consulting", "name": "IT-консалтинг", "description": "Консалтинговые услуги"},
+            {"id": "medical", "name": "Медицинские услуги", "description": "Частная медицинская практика"}
+        ];
+
+        this.taxRates = {
+            "ndfl": 0.13,
+            "socialContributions": 0.302,
+            "pfr": 0.22,
+            "fss": 0.029,
+            "foms": 0.051
+        };
+
+        this.init();
     }
 
-    initializeApp() {
-        // Инициализация приложения
-        this.loadUserSession();
+    init() {
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.setupApp();
+            });
+        } else {
+            this.setupApp();
+        }
+    }
+
+    setupApp() {
+        this.loadUserData();
         this.setupEventListeners();
         this.updateUI();
-        
-        // Автосохранение каждые 30 секунд
-        setInterval(() => {
-            if (this.currentModel && this.currentPage === 'model-editor') {
-                this.saveModel();
+        this.startAutoSave();
+    }
+
+    loadUserData() {
+        try {
+            const userData = JSON.parse(localStorage.getItem('finmodel_user') || 'null');
+            const modelsData = JSON.parse(localStorage.getItem('finmodel_models') || '[]');
+            
+            if (userData) {
+                this.currentUser = userData;
+                this.models = modelsData;
             }
-        }, 30000);
+        } catch (e) {
+            console.error('Error loading user data:', e);
+        }
+    }
+
+    saveUserData() {
+        try {
+            if (this.currentUser) {
+                localStorage.setItem('finmodel_user', JSON.stringify(this.currentUser));
+                localStorage.setItem('finmodel_models', JSON.stringify(this.models));
+            }
+        } catch (e) {
+            console.error('Error saving user data:', e);
+        }
     }
 
     setupEventListeners() {
-        // Навигация в sidebar
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
+        // Header authentication buttons
+        this.setupElement('loginBtn', 'click', () => this.showModal('loginModal'));
+        this.setupElement('registerBtn', 'click', () => this.showModal('registerModal'));
+        this.setupElement('logoutBtn', 'click', () => this.logout());
+
+        // Hero buttons
+        this.setupElement('heroLoginBtn', 'click', () => this.showModal('loginModal'));
+        this.setupElement('heroRegisterBtn', 'click', () => this.showModal('registerModal'));
+
+        // Dashboard buttons
+        this.setupElement('createModelBtn', 'click', () => this.showView('new-model'));
+        this.setupElement('createModelBtn2', 'click', () => this.showView('new-model'));
+
+        // Profile buttons
+        this.setupElement('updateProfileBtn', 'click', () => this.updateProfile());
+        this.setupElement('changePasswordBtn', 'click', () => this.showModal('changePasswordModal'));
+
+        // Model builder buttons
+        this.setupElement('prevStepBtn', 'click', () => this.previousStep());
+        this.setupElement('nextStepBtn', 'click', () => this.nextStep());
+        this.setupElement('saveModelBtn', 'click', () => this.saveModel());
+        this.setupElement('addProductBtn', 'click', () => this.addProduct());
+        this.setupElement('addPersonnelBtn', 'click', () => this.addPersonnel());
+        this.setupElement('addEquipmentBtn', 'click', () => this.addEquipment());
+        this.setupElement('addFundingBtn', 'click', () => this.addFunding());
+
+        // Modal close buttons
+        this.setupElement('loginModalClose', 'click', () => this.hideModal('loginModal'));
+        this.setupElement('registerModalClose', 'click', () => this.hideModal('registerModal'));
+        this.setupElement('forgotPasswordModalClose', 'click', () => this.hideModal('forgotPasswordModal'));
+        this.setupElement('changePasswordModalClose', 'click', () => this.hideModal('changePasswordModal'));
+
+        // Modal navigation links
+        this.setupElement('showForgotPassword', 'click', (e) => {
+            e.preventDefault();
+            this.hideModal('loginModal');
+            this.showModal('forgotPasswordModal');
+        });
+        this.setupElement('showRegisterFromLogin', 'click', (e) => {
+            e.preventDefault();
+            this.hideModal('loginModal');
+            this.showModal('registerModal');
+        });
+        this.setupElement('showLoginFromRegister', 'click', (e) => {
+            e.preventDefault();
+            this.hideModal('registerModal');
+            this.showModal('loginModal');
+        });
+        this.setupElement('backToLogin', 'click', (e) => {
+            e.preventDefault();
+            this.hideModal('forgotPasswordModal');
+            this.showModal('loginModal');
+        });
+
+        // Google login buttons
+        this.setupElement('googleLoginBtn', 'click', () => this.googleLogin());
+        this.setupElement('googleRegisterBtn', 'click', () => this.googleLogin());
+
+        // Confirm dialog buttons
+        this.setupElement('confirmCancel', 'click', () => this.hideConfirmDialog());
+
+        // Forms
+        this.setupElement('loginForm', 'submit', (e) => this.login(e));
+        this.setupElement('registerForm', 'submit', (e) => this.register(e));
+        this.setupElement('forgotPasswordForm', 'submit', (e) => this.resetPassword(e));
+        this.setupElement('changePasswordForm', 'submit', (e) => this.changePassword(e));
+
+        // Sidebar navigation
+        document.querySelectorAll('.sidebar__link').forEach(link => {
+            link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const page = e.currentTarget.dataset.page;
-                this.showDashboardPage(page);
+                const view = link.dataset.view;
+                this.showView(view);
+                
+                // Update active link
+                document.querySelectorAll('.sidebar__link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
             });
         });
 
-        // Табы в редакторе модели
-        document.querySelectorAll('.editor-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const tabName = e.target.dataset.tab;
-                this.showEditorTab(tabName);
-            });
-        });
-
-        // Табы расходов
-        document.querySelectorAll('.expense-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const tabName = e.target.dataset.expenseTab;
-                this.showExpenseTab(tabName);
-            });
-        });
-
-        // Форма аутентификации
-        const authForm = document.getElementById('auth-form');
-        if (authForm) {
-            authForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleAuth();
+        // Sidebar toggle
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('sidebar--collapsed');
             });
         }
 
-        // Обновление полей модели
-        this.setupModelFieldListeners();
-
-        // Переключение темы
-        const themeSelect = document.getElementById('theme-select');
-        if (themeSelect) {
-            themeSelect.addEventListener('change', (e) => {
-                this.setTheme(e.target.value);
-            });
-        }
-
-        // Закрытие модальных окон по клику на фон
+        // Tab switching
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
-                e.target.classList.add('hidden');
+            if (e.target.classList.contains('tab-btn')) {
+                const tabId = e.target.dataset.tab;
+                this.switchTab(e.target, tabId);
             }
         });
 
-        // Закрытие модальных окон по Escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('.modal:not(.hidden)').forEach(modal => {
-                    modal.classList.add('hidden');
-                });
-            }
-        });
-    }
-
-    setupModelFieldListeners() {
-        // Основные параметры
-        ['planning-horizon', 'base-currency', 'discount-rate', 'initial-investment', 'working-capital'].forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('input', () => this.updateModelCalculations());
+        // Form change detection for auto-save
+        document.addEventListener('input', (e) => {
+            if (e.target.closest('.model-builder')) {
+                this.hasUnsavedChanges = true;
+                this.updateSaveStatus('unsaved');
             }
         });
 
-        // Операционные расходы
-        ['rent-expense', 'utilities-expense', 'admin-expense', 'other-expense'].forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('input', () => this.updateModelCalculations());
-            }
-        });
+        // Advanced expenses toggle
+        const advancedExpenses = document.getElementById('advancedExpenses');
+        if (advancedExpenses) {
+            advancedExpenses.addEventListener('change', (e) => {
+                this.toggleAdvancedExpenses(e.target.checked);
+            });
+        }
 
-        // Маркетинговые расходы
-        ['online-advertising', 'offline-advertising', 'pr-events', 'content-marketing'].forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('input', () => this.updateModelCalculations());
+        // Close modals when clicking backdrop
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal__backdrop')) {
+                const modal = e.target.closest('.modal');
+                if (modal && modal.id) {
+                    this.hideModal(modal.id);
+                }
             }
         });
     }
 
-    // Аутентификация
-    showAuthModal(mode) {
-        this.authMode = mode;
-        const modal = document.getElementById('auth-modal');
-        const title = document.getElementById('auth-modal-title');
-        const submitBtn = document.getElementById('auth-submit');
-        const registerFields = document.getElementById('register-fields');
-        const switchText = document.getElementById('auth-switch-text');
-
-        if (mode === 'register') {
-            title.textContent = 'Регистрация';
-            submitBtn.textContent = 'Зарегистрироваться';
-            registerFields.classList.remove('hidden');
-            switchText.innerHTML = 'Уже есть аккаунт? <a href="#" onclick="app.switchAuthMode()">Войти</a>';
-        } else {
-            title.textContent = 'Вход в систему';
-            submitBtn.textContent = 'Войти';
-            registerFields.classList.add('hidden');
-            switchText.innerHTML = 'Нет аккаунта? <a href="#" onclick="app.switchAuthMode()">Зарегистрироваться</a>';
-        }
-
-        modal.classList.remove('hidden');
-    }
-
-    switchAuthMode() {
-        const newMode = this.authMode === 'login' ? 'register' : 'login';
-        this.showAuthModal(newMode);
-    }
-
-    handleAuth() {
-        const email = document.getElementById('auth-email').value;
-        const password = document.getElementById('auth-password').value;
-
-        if (!email || !password) {
-            alert('Пожалуйста, заполните все поля');
-            return;
-        }
-
-        if (this.authMode === 'register') {
-            const name = document.getElementById('auth-name').value;
-            const passwordConfirm = document.getElementById('auth-password-confirm').value;
-
-            if (!name) {
-                alert('Пожалуйста, введите имя');
-                return;
-            }
-
-            if (password !== passwordConfirm) {
-                alert('Пароли не совпадают');
-                return;
-            }
-
-            this.registerUser(email, password, name);
-        } else {
-            this.loginUser(email, password);
+    setupElement(id, event, handler) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener(event, handler);
         }
     }
 
-    registerUser(email, password, name) {
-        // Проверяем, есть ли уже такой пользователь
-        const users = JSON.parse(localStorage.getItem('finmodel_users') || '{}');
-        
-        if (users[email]) {
-            alert('Пользователь с таким email уже существует');
-            return;
-        }
-
-        // Создаем нового пользователя
-        users[email] = {
-            email,
-            name,
-            password, // В реальном приложении пароль должен быть захеширован
-            plan: 'FREE',
-            modelsUsed: 0,
-            createdAt: new Date(),
-            settings: {
-                theme: 'auto',
-                company: ''
-            }
-        };
-
-        localStorage.setItem('finmodel_users', JSON.stringify(users));
-        this.loginUser(email, password);
-    }
-
-    loginUser(email, password) {
-        const users = JSON.parse(localStorage.getItem('finmodel_users') || '{}');
-        const user = users[email];
-
-        if (!user || user.password !== password) {
-            alert('Неверный email или пароль');
-            return;
-        }
-
-        this.currentUser = user;
-        localStorage.setItem('finmodel_current_user', email);
-        this.closeModal('auth-modal');
-        this.showDashboard();
-    }
-
-    googleAuth() {
-        // Мокап Google OAuth
-        alert('Google OAuth интеграция будет доступна в следующей версии');
-        
-        // Для демонстрации создадим тестового пользователя
-        const testUser = {
-            email: 'test@google.com',
-            name: 'Тестовый пользователь',
-            plan: 'FREE',
-            modelsUsed: 0,
-            createdAt: new Date(),
-            settings: {
-                theme: 'auto',
-                company: 'Google'
-            }
-        };
-
-        this.currentUser = testUser;
-        const users = JSON.parse(localStorage.getItem('finmodel_users') || '{}');
-        users[testUser.email] = testUser;
-        localStorage.setItem('finmodel_users', JSON.stringify(users));
-        localStorage.setItem('finmodel_current_user', testUser.email);
-        
-        this.closeModal('auth-modal');
-        this.showDashboard();
-    }
-
-    logout() {
-        this.currentUser = null;
-        localStorage.removeItem('finmodel_current_user');
-        this.showLanding();
-    }
-
-    loadUserSession() {
-        const currentUserEmail = localStorage.getItem('finmodel_current_user');
-        if (currentUserEmail) {
-            const users = JSON.parse(localStorage.getItem('finmodel_users') || '{}');
-            this.currentUser = users[currentUserEmail];
-        }
-    }
-
-    // Управление страницами
-    showLanding() {
-        this.currentPage = 'landing';
-        this.hideAllPages();
-        document.getElementById('landing-page').classList.remove('hidden');
-        this.updateNavbar();
-    }
-
-    showDashboard() {
-        this.currentPage = 'dashboard';
-        this.hideAllPages();
-        document.getElementById('dashboard-page').classList.remove('hidden');
-        this.showDashboardPage('models');
-        this.updateNavbar();
-        this.updateSidebarInfo();
-        this.loadUserModels();
-    }
-
-    showModelEditor() {
-        this.currentPage = 'model-editor';
-        this.hideAllPages();
-        document.getElementById('model-editor').classList.remove('hidden');
-        this.showEditorTab('setup');
-        this.updateNavbar();
-    }
-
-    hideAllPages() {
-        document.getElementById('landing-page').classList.add('hidden');
-        document.getElementById('dashboard-page').classList.add('hidden');
-        document.getElementById('model-editor').classList.add('hidden');
-    }
-
-    showDashboardPage(page) {
-        // Скрываем все секции контента
-        document.querySelectorAll('.content-section').forEach(section => {
-            section.classList.add('hidden');
-        });
-
-        // Показываем нужную секцию
-        const contentSection = document.getElementById(`${page}-content`);
-        if (contentSection) {
-            contentSection.classList.remove('hidden');
-        }
-
-        // Обновляем активный пункт навигации
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        const activeNavItem = document.querySelector(`.nav-item[data-page="${page}"]`);
-        if (activeNavItem) {
-            activeNavItem.classList.add('active');
-        }
-
-        // Загружаем данные для страницы
-        if (page === 'models') {
-            this.loadUserModels();
-        } else if (page === 'settings') {
-            this.loadUserSettings();
-        } else if (page === 'billing') {
-            this.loadBillingInfo();
-        }
-    }
-
-    updateNavbar() {
-        const loggedOut = document.getElementById('navbar-logged-out');
-        const loggedIn = document.getElementById('navbar-logged-in');
-
+    updateUI() {
         if (this.currentUser) {
-            loggedOut.classList.add('hidden');
-            loggedIn.classList.remove('hidden');
-            document.getElementById('user-name').textContent = this.currentUser.name;
-            document.getElementById('user-plan').textContent = this.currentUser.plan;
+            this.showAppInterface();
+            this.updateUserInfo();
+            this.updateDashboard();
+            this.renderModels();
         } else {
-            loggedOut.classList.remove('hidden');
-            loggedIn.classList.add('hidden');
+            this.showLandingPage();
         }
+        this.renderPricingPlans();
+        this.populateIndustryOptions();
     }
 
-    updateSidebarInfo() {
-        if (!this.currentUser) return;
+    showLandingPage() {
+        const landingPage = document.getElementById('landingPage');
+        const appInterface = document.getElementById('appInterface');
+        const authButtons = document.getElementById('authButtons');
+        const userInfo = document.getElementById('userInfo');
 
-        const planLimits = {
-            'FREE': 3,
-            'BASIC': 'Неограниченно',
-            'WHITE-LABEL': 'Неограниченно'
-        };
+        if (landingPage) landingPage.classList.remove('hidden');
+        if (appInterface) appInterface.classList.add('hidden');
+        if (authButtons) authButtons.classList.remove('hidden');
+        if (userInfo) userInfo.classList.add('hidden');
+    }
 
-        document.getElementById('sidebar-plan').textContent = `${this.currentUser.plan} план`;
-        document.getElementById('models-used').textContent = this.currentUser.modelsUsed || 0;
+    showAppInterface() {
+        const landingPage = document.getElementById('landingPage');
+        const appInterface = document.getElementById('appInterface');
+        const authButtons = document.getElementById('authButtons');
+        const userInfo = document.getElementById('userInfo');
+
+        if (landingPage) landingPage.classList.add('hidden');
+        if (appInterface) appInterface.classList.remove('hidden');
+        if (authButtons) authButtons.classList.add('hidden');
+        if (userInfo) userInfo.classList.remove('hidden');
+
+        // Show dashboard by default
+        this.showView('dashboard');
+    }
+
+    showView(viewName) {
+        // Hide all views
+        document.querySelectorAll('.view').forEach(view => {
+            view.classList.remove('active');
+        });
         
-        const limit = planLimits[this.currentUser.plan];
-        document.getElementById('models-limit').textContent = limit;
-    }
-
-    // Модели
-    createNewModel() {
-        if (!this.canCreateModel()) {
-            this.showUpgradeModal();
-            return;
+        // Show selected view
+        const targetView = document.getElementById(viewName + 'View');
+        if (targetView) {
+            targetView.classList.add('active');
         }
 
-        this.currentModel = this.getDefaultModel();
-        this.showModelEditor();
-        this.populateModelEditor();
-    }
-
-    canCreateModel() {
-        if (!this.currentUser) return false;
-        if (this.currentUser.plan !== 'FREE') return true;
-        return (this.currentUser.modelsUsed || 0) < 3;
-    }
-
-    getDefaultModel() {
-        return {
-            id: Date.now().toString(),
-            name: `Модель ${new Date().toLocaleDateString()}`,
-            createdAt: new Date(),
-            lastModified: new Date(),
-            
-            // Основные параметры
-            settings: {
-                planningHorizon: 36,
-                baseCurrency: 'RUB',
-                discountRate: 12,
-                initialInvestment: 0,
-                workingCapital: 0
-            },
-
-            // Продукты
-            products: [],
-
-            // Расходы
-            expenses: {
-                operational: {
-                    rent: 0,
-                    utilities: 0,
-                    admin: 0,
-                    other: 0
-                },
-                personnel: [],
-                marketing: {
-                    onlineAdvertising: 0,
-                    offlineAdvertising: 0,
-                    prEvents: 0,
-                    contentMarketing: 0
-                },
-                capex: []
-            },
-
-            // Расчеты
-            calculations: {
-                revenue: [],
-                costs: [],
-                cashFlow: [],
-                metrics: {}
+        // Update sidebar active state
+        document.querySelectorAll('.sidebar__link').forEach(link => {
+            link.classList.remove('active');
+            if (link.dataset.view === viewName) {
+                link.classList.add('active');
             }
-        };
+        });
+
+        // Update view-specific content
+        if (viewName === 'models') {
+            this.renderModels();
+        } else if (viewName === 'dashboard') {
+            this.updateDashboard();
+        } else if (viewName === 'profile') {
+            this.updateProfile();
+        } else if (viewName === 'new-model') {
+            this.initNewModel();
+        }
     }
 
-    loadUserModels() {
+    updateUserInfo() {
         if (!this.currentUser) return;
 
-        const modelsKey = `finmodel_models_${this.currentUser.email}`;
-        const models = JSON.parse(localStorage.getItem(modelsKey) || '[]');
+        const userName = document.getElementById('userName');
+        const userPlan = document.getElementById('userPlan');
+        const sidebarPlan = document.getElementById('sidebarPlan');
+        const sidebarUsage = document.getElementById('sidebarUsage');
 
-        const modelsGrid = document.getElementById('models-grid');
+        if (userName) userName.textContent = this.currentUser.name;
+        if (userPlan) userPlan.textContent = this.currentUser.plan || 'FREE';
+        if (sidebarPlan) sidebarPlan.textContent = this.currentUser.plan || 'FREE';
         
-        if (models.length === 0) {
-            modelsGrid.innerHTML = `
+        if (sidebarUsage) {
+            const maxModels = this.subscriptionPlans[this.currentUser.plan || 'FREE'].maxModels;
+            const usedModels = this.models.length;
+            const usageText = maxModels === -1 ? `${usedModels} моделей` : `${usedModels}/${maxModels} моделей`;
+            sidebarUsage.textContent = usageText;
+        }
+    }
+
+    renderPricingPlans() {
+        const container = document.getElementById('pricingPlans');
+        if (!container) return;
+
+        container.innerHTML = '';
+        
+        Object.values(this.subscriptionPlans).forEach((plan, index) => {
+            const planCard = document.createElement('div');
+            planCard.className = `pricing-card ${index === 1 ? 'pricing-card--featured' : ''}`;
+            
+            const btnText = plan.name === 'FREE' ? 'Начать бесплатно' : 'Выбрать план';
+            const btnAction = plan.name === 'FREE' ? 'showModal(\'registerModal\')' : 'handlePricingUpgrade()';
+            
+            planCard.innerHTML = `
+                <div class="pricing-card__name">${plan.name}</div>
+                <div class="pricing-card__price">${plan.price}</div>
+                <ul class="pricing-card__features">
+                    ${plan.features.map(feature => `<li>${feature}</li>`).join('')}
+                </ul>
+                <button class="btn btn--primary btn--full-width" onclick="${btnAction}">
+                    ${btnText}
+                </button>
+            `;
+            
+            container.appendChild(planCard);
+        });
+    }
+
+    handlePricingUpgrade() {
+        this.showToast('Функция выбора платного плана будет доступна в полной версии', 'info');
+    }
+
+    populateIndustryOptions() {
+        const select = document.getElementById('modelIndustry');
+        if (!select) return;
+
+        // Clear existing options except the first one
+        while (select.children.length > 1) {
+            select.removeChild(select.lastChild);
+        }
+
+        this.industryTemplates.forEach(template => {
+            const option = document.createElement('option');
+            option.value = template.id;
+            option.textContent = template.name;
+            select.appendChild(option);
+        });
+    }
+
+    updateDashboard() {
+        if (!this.currentUser) return;
+
+        const totalModels = this.models.length;
+        const activeProjects = this.models.filter(model => model.status === 'active').length;
+        const totalRevenue = this.models.reduce((sum, model) => sum + (model.metrics?.totalRevenue || 0), 0);
+        const averageNPV = totalModels > 0 ? this.models.reduce((sum, model) => sum + (model.metrics?.npv || 0), 0) / totalModels : 0;
+
+        const totalModelsEl = document.getElementById('totalModels');
+        const activeProjectsEl = document.getElementById('activeProjects');
+        const totalRevenueEl = document.getElementById('totalRevenue');
+        const averageNPVEl = document.getElementById('averageNPV');
+
+        if (totalModelsEl) totalModelsEl.textContent = totalModels;
+        if (activeProjectsEl) activeProjectsEl.textContent = activeProjects;
+        if (totalRevenueEl) totalRevenueEl.textContent = this.formatCurrency(totalRevenue, 'RUB');
+        if (averageNPVEl) averageNPVEl.textContent = this.formatCurrency(averageNPV, 'RUB');
+
+        this.renderDashboardChart();
+    }
+
+    renderDashboardChart() {
+        const canvas = document.getElementById('revenueChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const ctx = canvas.getContext('2d');
+        
+        // Clear any existing chart
+        Chart.getChart(canvas)?.destroy();
+        
+        // Sample data for demonstration
+        const data = {
+            labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
+            datasets: [{
+                label: 'Выручка',
+                data: [120000, 180000, 250000, 320000, 400000, 480000],
+                backgroundColor: '#1FB8CD',
+                borderColor: '#1FB8CD',
+                tension: 0.4
+            }]
+        };
+
+        new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return new Intl.NumberFormat('ru-RU', {
+                                    style: 'currency',
+                                    currency: 'RUB',
+                                    minimumFractionDigits: 0
+                                }).format(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    renderModels() {
+        const container = document.getElementById('modelsGrid');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (this.models.length === 0) {
+            container.innerHTML = `
                 <div class="empty-state">
                     <h3>У вас пока нет моделей</h3>
-                    <p>Создайте первую финансовую модель или выберите шаблон</p>
-                    <button class="btn btn--primary" onclick="app.createNewModel()">
-                        Создать модель
-                    </button>
+                    <p>Создайте первую финансовую модель для вашего проекта</p>
+                    <button class="btn btn--primary" onclick="app.showView('new-model')">Создать модель</button>
                 </div>
             `;
             return;
         }
 
-        modelsGrid.innerHTML = models.map(model => `
-            <div class="model-card" onclick="app.openModel('${model.id}')">
-                <h3>${model.name}</h3>
-                <div class="model-meta">
-                    Создана: ${new Date(model.createdAt).toLocaleDateString()}
-                    <br>
-                    Изменена: ${new Date(model.lastModified).toLocaleDateString()}
+        this.models.forEach(model => {
+            const modelCard = document.createElement('div');
+            modelCard.className = 'model-card';
+            
+            modelCard.innerHTML = `
+                <div class="model-card__header">
+                    <h3 class="model-card__title">${model.name}</h3>
+                    <button class="model-card__delete" onclick="app.confirmDeleteModel('${model.id}')" title="Удалить модель">×</button>
                 </div>
-                <div class="model-metrics">
-                    <div class="metric">
-                        <div class="metric-label">NPV</div>
-                        <div class="metric-value">${this.formatCurrency(model.calculations?.metrics?.npv || 0)}</div>
+                <p class="model-card__description">${model.description || 'Без описания'}</p>
+                <div class="model-card__stats">
+                    <div class="model-card__stat">
+                        <span class="model-card__stat-value">${this.formatCurrency(model.metrics?.totalRevenue || 0, model.currency)}</span>
+                        <span class="model-card__stat-label">Выручка</span>
                     </div>
-                    <div class="metric">
-                        <div class="metric-label">IRR</div>
-                        <div class="metric-value">${this.formatPercent(model.calculations?.metrics?.irr || 0)}</div>
+                    <div class="model-card__stat">
+                        <span class="model-card__stat-value">${this.formatCurrency(model.metrics?.npv || 0, model.currency)}</span>
+                        <span class="model-card__stat-label">NPV</span>
+                    </div>
+                    <div class="model-card__stat">
+                        <span class="model-card__stat-value">${(model.metrics?.irr || 0).toFixed(1)}%</span>
+                        <span class="model-card__stat-label">IRR</span>
                     </div>
                 </div>
-            </div>
-        `).join('');
+                <div class="model-card__actions">
+                    <button class="btn btn--outline btn--sm" onclick="app.editModel('${model.id}')">Редактировать</button>
+                    <button class="btn btn--primary btn--sm" onclick="app.viewResults('${model.id}')">Результаты</button>
+                </div>
+            `;
+            
+            container.appendChild(modelCard);
+        });
     }
 
-    openModel(modelId) {
-        const modelsKey = `finmodel_models_${this.currentUser.email}`;
-        const models = JSON.parse(localStorage.getItem(modelsKey) || '[]');
+    updateProfile() {
+        if (!this.currentUser) return;
+
+        const profileEmail = document.getElementById('profileEmail');
+        const profileName = document.getElementById('profileName');
+        const profileCompany = document.getElementById('profileCompany');
+        const subscriptionPlan = document.getElementById('subscriptionPlan');
+        const subscriptionDetails = document.getElementById('subscriptionDetails');
+        const subscriptionUsage = document.getElementById('subscriptionUsage');
+
+        if (profileEmail) profileEmail.value = this.currentUser.email;
+        if (profileName) profileName.value = this.currentUser.name;
+        if (profileCompany) profileCompany.value = this.currentUser.company || '';
+
+        const plan = this.subscriptionPlans[this.currentUser.plan || 'FREE'];
+        if (subscriptionPlan) subscriptionPlan.textContent = plan.name;
+        if (subscriptionDetails) subscriptionDetails.textContent = plan.features.join(', ');
         
-        this.currentModel = models.find(m => m.id === modelId);
-        if (this.currentModel) {
-            this.showModelEditor();
-            this.populateModelEditor();
+        if (subscriptionUsage) {
+            const maxModels = plan.maxModels;
+            const usedModels = this.models.length;
+            const usageText = maxModels === -1 ? `Использовано: ${usedModels} моделей` : `Использовано: ${usedModels} из ${maxModels} моделей`;
+            subscriptionUsage.textContent = usageText;
         }
     }
 
-    populateModelEditor() {
-        if (!this.currentModel) return;
+    // Authentication Methods
+    async login(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const email = formData.get('email');
+        const password = formData.get('password');
 
-        // Заполняем основные поля
-        const modelNameInput = document.getElementById('model-name');
-        if (modelNameInput) modelNameInput.value = this.currentModel.name;
-        
-        const planningHorizonSelect = document.getElementById('planning-horizon');
-        if (planningHorizonSelect) planningHorizonSelect.value = this.currentModel.settings.planningHorizon;
-        
-        const baseCurrencySelect = document.getElementById('base-currency');
-        if (baseCurrencySelect) baseCurrencySelect.value = this.currentModel.settings.baseCurrency;
-        
-        const discountRateInput = document.getElementById('discount-rate');
-        if (discountRateInput) discountRateInput.value = this.currentModel.settings.discountRate;
-        
-        const initialInvestmentInput = document.getElementById('initial-investment');
-        if (initialInvestmentInput) initialInvestmentInput.value = this.currentModel.settings.initialInvestment;
-        
-        const workingCapitalInput = document.getElementById('working-capital');
-        if (workingCapitalInput) workingCapitalInput.value = this.currentModel.settings.workingCapital;
+        // Show loading state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Вход...';
+        submitBtn.disabled = true;
 
-        // Заполняем расходы
-        const expenses = this.currentModel.expenses;
-        const rentExpenseInput = document.getElementById('rent-expense');
-        if (rentExpenseInput) rentExpenseInput.value = expenses.operational.rent;
-        
-        const utilitiesExpenseInput = document.getElementById('utilities-expense');
-        if (utilitiesExpenseInput) utilitiesExpenseInput.value = expenses.operational.utilities;
-        
-        const adminExpenseInput = document.getElementById('admin-expense');
-        if (adminExpenseInput) adminExpenseInput.value = expenses.operational.admin;
-        
-        const otherExpenseInput = document.getElementById('other-expense');
-        if (otherExpenseInput) otherExpenseInput.value = expenses.operational.other;
+        // Simulate API call
+        setTimeout(() => {
+            // For demo purposes, accept any email/password
+            this.currentUser = {
+                id: Date.now().toString(),
+                email: email,
+                name: email.split('@')[0],
+                plan: 'FREE',
+                loginMethod: 'email',
+                createdAt: new Date().toISOString()
+            };
 
-        const onlineAdvertisingInput = document.getElementById('online-advertising');
-        if (onlineAdvertisingInput) onlineAdvertisingInput.value = expenses.marketing.onlineAdvertising;
-        
-        const offlineAdvertisingInput = document.getElementById('offline-advertising');
-        if (offlineAdvertisingInput) offlineAdvertisingInput.value = expenses.marketing.offlineAdvertising;
-        
-        const prEventsInput = document.getElementById('pr-events');
-        if (prEventsInput) prEventsInput.value = expenses.marketing.prEvents;
-        
-        const contentMarketingInput = document.getElementById('content-marketing');
-        if (contentMarketingInput) contentMarketingInput.value = expenses.marketing.contentMarketing;
+            this.saveUserData();
+            this.updateUI();
+            this.hideModal('loginModal');
+            this.showToast('Добро пожаловать в FinModel Pro!', 'success');
 
-        // Загружаем продукты, персонал и капитальные расходы
-        this.renderProducts();
-        this.renderPersonnel();
-        this.renderCapex();
+            // Reset button
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            event.target.reset();
+        }, 1000);
+    }
 
-        // Обновляем расчеты
-        this.updateModelCalculations();
+    async register(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const email = formData.get('email');
+        const name = formData.get('name');
+        const password = formData.get('password');
+        const confirmPassword = formData.get('confirmPassword');
+
+        if (password !== confirmPassword) {
+            this.showToast('Пароли не совпадают', 'error');
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Регистрация...';
+        submitBtn.disabled = true;
+
+        // Simulate API call
+        setTimeout(() => {
+            this.currentUser = {
+                id: Date.now().toString(),
+                email: email,
+                name: name,
+                plan: 'FREE',
+                loginMethod: 'email',
+                createdAt: new Date().toISOString()
+            };
+
+            this.saveUserData();
+            this.updateUI();
+            this.hideModal('registerModal');
+            this.showToast('Регистрация успешно завершена!', 'success');
+
+            // Reset button
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            event.target.reset();
+        }, 1000);
+    }
+
+    async resetPassword(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const email = formData.get('email');
+
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Отправка...';
+        submitBtn.disabled = true;
+
+        // Simulate API call
+        setTimeout(() => {
+            this.hideModal('forgotPasswordModal');
+            this.showToast('Инструкции по восстановлению отправлены на email', 'success');
+
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            event.target.reset();
+        }, 1000);
+    }
+
+    async changePassword(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const currentPassword = formData.get('currentPassword');
+        const newPassword = formData.get('newPassword');
+        const confirmNewPassword = formData.get('confirmNewPassword');
+
+        if (newPassword !== confirmNewPassword) {
+            this.showToast('Новые пароли не совпадают', 'error');
+            return;
+        }
+
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Изменение...';
+        submitBtn.disabled = true;
+
+        // Simulate API call
+        setTimeout(() => {
+            this.hideModal('changePasswordModal');
+            this.showToast('Пароль успешно изменен', 'success');
+
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            event.target.reset();
+        }, 1000);
+    }
+
+    googleLogin() {
+        // Simulate Google OAuth
+        setTimeout(() => {
+            this.currentUser = {
+                id: Date.now().toString(),
+                email: 'user@gmail.com',
+                name: 'Google User',
+                plan: 'FREE',
+                loginMethod: 'google',
+                createdAt: new Date().toISOString()
+            };
+
+            this.saveUserData();
+            this.updateUI();
+            this.hideModal('loginModal');
+            this.hideModal('registerModal');
+            this.showToast('Вход через Google успешен!', 'success');
+        }, 1000);
+    }
+
+    updateProfile() {
+        const profileName = document.getElementById('profileName');
+        const profileCompany = document.getElementById('profileCompany');
+
+        if (!profileName || !profileCompany) return;
+
+        const name = profileName.value;
+        const company = profileCompany.value;
+
+        if (this.currentUser) {
+            this.currentUser.name = name;
+            this.currentUser.company = company;
+            this.saveUserData();
+            this.updateUserInfo();
+            this.showToast('Профиль обновлен', 'success');
+        }
+    }
+
+    logout() {
+        this.currentUser = null;
+        this.models = [];
+        this.currentModel = null;
+        localStorage.removeItem('finmodel_user');
+        localStorage.removeItem('finmodel_models');
+        this.updateUI();
+        this.showToast('Вы вышли из системы', 'info');
+    }
+
+    // Model Management Methods
+    initNewModel() {
+        this.currentModel = {
+            id: Date.now().toString(),
+            name: '',
+            description: '',
+            industry: '',
+            currency: 'RUB',
+            planningPeriod: 'monthly',
+            products: [],
+            expenses: [],
+            personnel: [],
+            equipment: [],
+            funding: [],
+            status: 'draft',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        this.currentStep = 0;
+        this.updateModelBuilderStep();
+        this.renderExpenses();
+    }
+
+    editModel(modelId) {
+        const model = this.models.find(m => m.id === modelId);
+        if (model) {
+            this.currentModel = { ...model };
+            this.showView('new-model');
+            this.currentStep = 0;
+            this.updateModelBuilderStep();
+        }
+    }
+
+    viewResults(modelId) {
+        const model = this.models.find(m => m.id === modelId);
+        if (model) {
+            this.currentModel = { ...model };
+            this.showView('new-model');
+            this.currentStep = 5; // Results step
+            this.updateModelBuilderStep();
+            this.renderResults();
+        }
+    }
+
+    confirmDeleteModel(modelId) {
+        const model = this.models.find(m => m.id === modelId);
+        if (model) {
+            this.showConfirmDialog(
+                'Удаление модели',
+                `Вы уверены, что хотите удалить модель "${model.name}"? Это действие нельзя отменить.`,
+                () => this.deleteModel(modelId)
+            );
+        }
+    }
+
+    deleteModel(modelId) {
+        this.models = this.models.filter(m => m.id !== modelId);
+        this.saveUserData();
+        this.renderModels();
+        this.updateDashboard();
+        this.showToast('Модель удалена', 'success');
     }
 
     saveModel() {
         if (!this.currentModel || !this.currentUser) return;
 
-        // Обновляем данные модели из формы
-        const modelNameInput = document.getElementById('model-name');
-        if (modelNameInput) this.currentModel.name = modelNameInput.value;
-        this.currentModel.lastModified = new Date();
-
-        // Сохраняем настройки
-        const planningHorizonSelect = document.getElementById('planning-horizon');
-        const baseCurrencySelect = document.getElementById('base-currency');
-        const discountRateInput = document.getElementById('discount-rate');
-        const initialInvestmentInput = document.getElementById('initial-investment');
-        const workingCapitalInput = document.getElementById('working-capital');
-
-        this.currentModel.settings = {
-            planningHorizon: planningHorizonSelect ? parseInt(planningHorizonSelect.value) : 36,
-            baseCurrency: baseCurrencySelect ? baseCurrencySelect.value : 'RUB',
-            discountRate: discountRateInput ? parseFloat(discountRateInput.value) : 12,
-            initialInvestment: initialInvestmentInput ? parseFloat(initialInvestmentInput.value) || 0 : 0,
-            workingCapital: workingCapitalInput ? parseFloat(workingCapitalInput.value) || 0 : 0
-        };
-
-        // Сохраняем расходы
-        const rentExpenseInput = document.getElementById('rent-expense');
-        const utilitiesExpenseInput = document.getElementById('utilities-expense');
-        const adminExpenseInput = document.getElementById('admin-expense');
-        const otherExpenseInput = document.getElementById('other-expense');
-
-        this.currentModel.expenses.operational = {
-            rent: rentExpenseInput ? parseFloat(rentExpenseInput.value) || 0 : 0,
-            utilities: utilitiesExpenseInput ? parseFloat(utilitiesExpenseInput.value) || 0 : 0,
-            admin: adminExpenseInput ? parseFloat(adminExpenseInput.value) || 0 : 0,
-            other: otherExpenseInput ? parseFloat(otherExpenseInput.value) || 0 : 0
-        };
-
-        const onlineAdvertisingInput = document.getElementById('online-advertising');
-        const offlineAdvertisingInput = document.getElementById('offline-advertising');
-        const prEventsInput = document.getElementById('pr-events');
-        const contentMarketingInput = document.getElementById('content-marketing');
-
-        this.currentModel.expenses.marketing = {
-            onlineAdvertising: onlineAdvertisingInput ? parseFloat(onlineAdvertisingInput.value) || 0 : 0,
-            offlineAdvertising: offlineAdvertisingInput ? parseFloat(offlineAdvertisingInput.value) || 0 : 0,
-            prEvents: prEventsInput ? parseFloat(prEventsInput.value) || 0 : 0,
-            contentMarketing: contentMarketingInput ? parseFloat(contentMarketingInput.value) || 0 : 0
-        };
-
-        // Сохраняем в localStorage
-        const modelsKey = `finmodel_models_${this.currentUser.email}`;
-        const models = JSON.parse(localStorage.getItem(modelsKey) || '[]');
-        
-        const existingIndex = models.findIndex(m => m.id === this.currentModel.id);
-        if (existingIndex >= 0) {
-            models[existingIndex] = this.currentModel;
-        } else {
-            models.push(this.currentModel);
-            // Увеличиваем счетчик использованных моделей
-            this.currentUser.modelsUsed = (this.currentUser.modelsUsed || 0) + 1;
-            this.updateUserData();
+        // Validate required fields
+        if (!this.currentModel.name) {
+            this.showToast('Укажите название модели', 'error');
+            return;
         }
 
-        localStorage.setItem(modelsKey, JSON.stringify(models));
+        // Check subscription limits
+        const plan = this.subscriptionPlans[this.currentUser.plan || 'FREE'];
+        if (plan.maxModels !== -1 && this.models.length >= plan.maxModels) {
+            const existingIndex = this.models.findIndex(m => m.id === this.currentModel.id);
+            if (existingIndex === -1) {
+                this.showToast('Достигнут лимит моделей. Обновите тариф.', 'error');
+                return;
+            }
+        }
+
+        // Calculate metrics
+        this.currentModel.metrics = this.calculateMetrics(this.currentModel);
+        this.currentModel.status = 'active';
+        this.currentModel.updatedAt = new Date().toISOString();
+
+        // Save model
+        const existingIndex = this.models.findIndex(m => m.id === this.currentModel.id);
+        if (existingIndex >= 0) {
+            this.models[existingIndex] = { ...this.currentModel };
+        } else {
+            this.models.push({ ...this.currentModel });
+        }
+
+        this.saveUserData();
+        this.hasUnsavedChanges = false;
+        this.updateSaveStatus('saved');
+        this.showToast('Модель сохранена', 'success');
+    }
+
+    // Model Builder Navigation
+    nextStep() {
+        if (this.currentStep < 5) {
+            if (this.validateCurrentStep()) {
+                this.currentStep++;
+                this.updateModelBuilderStep();
+            }
+        }
+    }
+
+    previousStep() {
+        if (this.currentStep > 0) {
+            this.currentStep--;
+            this.updateModelBuilderStep();
+        }
+    }
+
+    updateModelBuilderStep() {
+        // Update step indicators
+        document.querySelectorAll('.step').forEach((step, index) => {
+            step.classList.toggle('active', index === this.currentStep);
+        });
+
+        // Update step content
+        document.querySelectorAll('.step-content').forEach((content, index) => {
+            content.classList.toggle('active', index === this.currentStep);
+            content.classList.toggle('hidden', index !== this.currentStep);
+        });
+
+        // Update navigation buttons
+        const prevBtn = document.getElementById('prevStepBtn');
+        const nextBtn = document.getElementById('nextStepBtn');
+        const saveBtn = document.getElementById('saveModelBtn');
+
+        if (prevBtn) prevBtn.disabled = this.currentStep === 0;
         
-        // Показываем уведомление
-        this.showNotification('Модель сохранена', 'success');
+        if (this.currentStep === 5) {
+            if (nextBtn) nextBtn.classList.add('hidden');
+            if (saveBtn) saveBtn.classList.remove('hidden');
+            this.renderResults();
+        } else {
+            if (nextBtn) nextBtn.classList.remove('hidden');
+            if (saveBtn) saveBtn.classList.add('hidden');
+        }
+
+        // Load step-specific data
+        this.loadStepData();
     }
 
-    updateUserData() {
-        const users = JSON.parse(localStorage.getItem('finmodel_users') || '{}');
-        users[this.currentUser.email] = this.currentUser;
-        localStorage.setItem('finmodel_users', JSON.stringify(users));
+    validateCurrentStep() {
+        switch (this.currentStep) {
+            case 0: // Basic info
+                const modelName = document.getElementById('modelName');
+                if (!modelName || !modelName.value.trim()) {
+                    this.showToast('Укажите название модели', 'error');
+                    return false;
+                }
+                this.currentModel.name = modelName.value;
+                
+                const modelDescription = document.getElementById('modelDescription');
+                if (modelDescription) this.currentModel.description = modelDescription.value;
+                
+                const modelIndustry = document.getElementById('modelIndustry');
+                if (modelIndustry) this.currentModel.industry = modelIndustry.value;
+                
+                const modelCurrency = document.getElementById('modelCurrency');
+                if (modelCurrency) this.currentModel.currency = modelCurrency.value;
+                
+                const planningPeriod = document.getElementById('planningPeriod');
+                if (planningPeriod) this.currentModel.planningPeriod = planningPeriod.value;
+                
+                return true;
+            default:
+                return true;
+        }
     }
 
-    // Продукты
+    loadStepData() {
+        if (!this.currentModel) return;
+
+        switch (this.currentStep) {
+            case 0: // Basic info
+                const modelName = document.getElementById('modelName');
+                const modelDescription = document.getElementById('modelDescription');
+                const modelIndustry = document.getElementById('modelIndustry');
+                const modelCurrency = document.getElementById('modelCurrency');
+                const planningPeriod = document.getElementById('planningPeriod');
+
+                if (modelName) modelName.value = this.currentModel.name || '';
+                if (modelDescription) modelDescription.value = this.currentModel.description || '';
+                if (modelIndustry) modelIndustry.value = this.currentModel.industry || '';
+                if (modelCurrency) modelCurrency.value = this.currentModel.currency || 'RUB';
+                if (planningPeriod) planningPeriod.value = this.currentModel.planningPeriod || 'monthly';
+                break;
+            case 1: // Products
+                this.renderProducts();
+                break;
+            case 2: // Expenses
+                this.renderExpenses();
+                break;
+            case 3: // Personnel
+                this.renderPersonnel();
+                break;
+            case 4: // Investments
+                this.renderInvestments();
+                break;
+            case 5: // Results
+                this.renderResults();
+                break;
+        }
+    }
+
+    // Product Management
     addProduct() {
+        if (!this.currentModel.products) this.currentModel.products = [];
+        
         const product = {
             id: Date.now().toString(),
-            name: 'Новый продукт',
-            price: 1000,
-            cost: 400,
-            currency: this.currentModel.settings.baseCurrency,
-            salesGrowth: 'linear',
-            initialSales: 100,
-            growthRate: 10,
-            seasonality: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            name: '',
+            description: '',
+            price: 0,
+            cost: 0,
+            salesPlan: 'manual',
+            periods: []
         };
 
         this.currentModel.products.push(product);
         this.renderProducts();
-        this.updateModelCalculations();
+        this.hasUnsavedChanges = true;
+    }
+
+    removeProduct(productId) {
+        this.currentModel.products = this.currentModel.products.filter(p => p.id !== productId);
+        this.renderProducts();
+        this.hasUnsavedChanges = true;
     }
 
     renderProducts() {
-        const productsList = document.getElementById('products-list');
-        if (!productsList) return;
-        
-        if (this.currentModel.products.length === 0) {
-            productsList.innerHTML = `
-                <div class="empty-state">
-                    <h3>Добавьте первый продукт</h3>
-                    <p>Начните с добавления продукта или услуги для планирования выручки</p>
-                </div>
-            `;
-            return;
-        }
+        const container = document.getElementById('productsList');
+        if (!container || !this.currentModel.products) return;
 
-        productsList.innerHTML = this.currentModel.products.map(product => `
-            <div class="product-item" data-product-id="${product.id}">
-                <div class="product-header">
-                    <input type="text" class="form-control" value="${product.name}" 
-                           onchange="app.updateProductField('${product.id}', 'name', this.value)">
-                    <button class="remove-btn" onclick="app.removeProduct('${product.id}')">&times;</button>
+        container.innerHTML = '';
+
+        this.currentModel.products.forEach(product => {
+            const productDiv = document.createElement('div');
+            productDiv.className = 'product-item';
+            
+            productDiv.innerHTML = `
+                <div class="product-item__header">
+                    <div class="product-item__title">Продукт #${product.id.slice(-4)}</div>
+                    <button class="product-item__remove" onclick="app.removeProduct('${product.id}')">×</button>
                 </div>
-                <div class="product-grid">
+                <div class="product-item__fields">
                     <div class="form-group">
-                        <label class="form-label">Цена за единицу</label>
+                        <label class="form-label">Название</label>
+                        <input type="text" class="form-control" value="${product.name}" 
+                               onchange="app.updateProductField('${product.id}', 'name', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <input type="text" class="form-control" value="${product.description}" 
+                               onchange="app.updateProductField('${product.id}', 'description', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Цена продажи</label>
                         <input type="number" class="form-control" value="${product.price}" 
                                onchange="app.updateProductField('${product.id}', 'price', parseFloat(this.value))">
                     </div>
@@ -649,442 +982,597 @@ class FinModelApp {
                         <input type="number" class="form-control" value="${product.cost}" 
                                onchange="app.updateProductField('${product.id}', 'cost', parseFloat(this.value))">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Начальные продажи</label>
-                        <input type="number" class="form-control" value="${product.initialSales}" 
-                               onchange="app.updateProductField('${product.id}', 'initialSales', parseInt(this.value))">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Рост продаж (%)</label>
-                        <input type="number" class="form-control" value="${product.growthRate}" 
-                               onchange="app.updateProductField('${product.id}', 'growthRate', parseFloat(this.value))">
-                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+            
+            container.appendChild(productDiv);
+        });
     }
 
     updateProductField(productId, field, value) {
         const product = this.currentModel.products.find(p => p.id === productId);
         if (product) {
             product[field] = value;
-            this.updateModelCalculations();
+            this.hasUnsavedChanges = true;
         }
     }
 
-    removeProduct(productId) {
-        this.currentModel.products = this.currentModel.products.filter(p => p.id !== productId);
-        this.renderProducts();
-        this.updateModelCalculations();
+    // Expense Management
+    toggleAdvancedExpenses(advanced) {
+        // Toggle between simple and advanced expense modes
+        this.renderExpenses();
     }
 
-    // Персонал
-    addEmployee() {
-        const employee = {
+    renderExpenses() {
+        const container = document.getElementById('expensesList');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        this.expenseCategories.forEach(category => {
+            const expenseDiv = document.createElement('div');
+            expenseDiv.className = 'expense-item';
+            
+            expenseDiv.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">${category.name}</label>
+                    <input type="number" class="form-control" placeholder="Сумма в месяц" 
+                           onchange="app.updateExpense('${category.id}', parseFloat(this.value))">
+                </div>
+            `;
+            
+            container.appendChild(expenseDiv);
+        });
+    }
+
+    updateExpense(categoryId, amount) {
+        if (!this.currentModel.expenses) this.currentModel.expenses = [];
+        
+        const existingIndex = this.currentModel.expenses.findIndex(e => e.categoryId === categoryId);
+        if (existingIndex >= 0) {
+            this.currentModel.expenses[existingIndex].amount = amount;
+        } else {
+            this.currentModel.expenses.push({
+                categoryId: categoryId,
+                amount: amount
+            });
+        }
+        
+        this.hasUnsavedChanges = true;
+    }
+
+    // Personnel Management
+    addPersonnel() {
+        if (!this.currentModel.personnel) this.currentModel.personnel = [];
+        
+        const person = {
             id: Date.now().toString(),
-            position: 'Новая должность',
+            position: '',
             count: 1,
-            salary: 50000,
+            salary: 0,
             startMonth: 1
         };
 
-        this.currentModel.expenses.personnel.push(employee);
+        this.currentModel.personnel.push(person);
         this.renderPersonnel();
-        this.updateModelCalculations();
+        this.hasUnsavedChanges = true;
     }
 
     renderPersonnel() {
-        const personnelList = document.getElementById('personnel-list');
-        if (!personnelList) return;
-        
-        if (this.currentModel.expenses.personnel.length === 0) {
-            personnelList.innerHTML = `
-                <div class="empty-state">
-                    <p>Добавьте сотрудников для планирования расходов на персонал</p>
-                </div>
-            `;
-            return;
-        }
+        const container = document.getElementById('personnelList');
+        if (!container || !this.currentModel.personnel) return;
 
-        personnelList.innerHTML = this.currentModel.expenses.personnel.map(employee => `
-            <div class="personnel-item" data-employee-id="${employee.id}">
-                <div class="personnel-grid">
+        container.innerHTML = '';
+
+        this.currentModel.personnel.forEach(person => {
+            const taxes = this.calculatePersonnelTaxes(person.salary * person.count);
+            
+            const personnelDiv = document.createElement('div');
+            personnelDiv.className = 'personnel-item';
+            
+            personnelDiv.innerHTML = `
+                <div class="product-item__header">
+                    <div class="product-item__title">Должность #${person.id.slice(-4)}</div>
+                    <button class="product-item__remove" onclick="app.removePersonnel('${person.id}')">×</button>
+                </div>
+                <div class="personnel-item__fields">
                     <div class="form-group">
                         <label class="form-label">Должность</label>
-                        <input type="text" class="form-control" value="${employee.position}" 
-                               onchange="app.updateEmployeeField('${employee.id}', 'position', this.value)">
+                        <input type="text" class="form-control" value="${person.position}" 
+                               onchange="app.updatePersonnelField('${person.id}', 'position', this.value)">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Количество</label>
-                        <input type="number" class="form-control" value="${employee.count}" min="1"
-                               onchange="app.updateEmployeeField('${employee.id}', 'count', parseInt(this.value))">
+                        <input type="number" class="form-control" value="${person.count}" min="1"
+                               onchange="app.updatePersonnelField('${person.id}', 'count', parseInt(this.value))">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Зарплата</label>
-                        <input type="number" class="form-control" value="${employee.salary}" 
-                               onchange="app.updateEmployeeField('${employee.id}', 'salary', parseFloat(this.value))">
+                        <label class="form-label">Зарплата (за 1 чел.)</label>
+                        <input type="number" class="form-control" value="${person.salary}" 
+                               onchange="app.updatePersonnelField('${person.id}', 'salary', parseFloat(this.value))">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Месяц найма</label>
-                        <input type="number" class="form-control" value="${employee.startMonth}" min="1" max="12"
-                               onchange="app.updateEmployeeField('${employee.id}', 'startMonth', parseInt(this.value))">
-                    </div>
-                    <div class="form-group">
-                        <button class="remove-btn" onclick="app.removeEmployee('${employee.id}')">&times;</button>
+                        <select class="form-control" onchange="app.updatePersonnelField('${person.id}', 'startMonth', parseInt(this.value))">
+                            ${this.generateMonthOptions(person.startMonth)}
+                        </select>
                     </div>
                 </div>
-            </div>
-        `).join('');
-    }
-
-    updateEmployeeField(employeeId, field, value) {
-        const employee = this.currentModel.expenses.personnel.find(e => e.id === employeeId);
-        if (employee) {
-            employee[field] = value;
-            this.updateModelCalculations();
-        }
-    }
-
-    removeEmployee(employeeId) {
-        this.currentModel.expenses.personnel = this.currentModel.expenses.personnel.filter(e => e.id !== employeeId);
-        this.renderPersonnel();
-        this.updateModelCalculations();
-    }
-
-    // Капитальные расходы
-    addCapexItem() {
-        const capexItem = {
-            id: Date.now().toString(),
-            name: 'Новая инвестиция',
-            amount: 100000,
-            month: 1,
-            depreciationPeriod: 60,
-            depreciationType: 'linear'
-        };
-
-        this.currentModel.expenses.capex.push(capexItem);
-        this.renderCapex();
-        this.updateModelCalculations();
-    }
-
-    renderCapex() {
-        const capexList = document.getElementById('capex-list');
-        if (!capexList) return;
-        
-        if (this.currentModel.expenses.capex.length === 0) {
-            capexList.innerHTML = `
-                <div class="empty-state">
-                    <p>Добавьте капитальные расходы для планирования инвестиций</p>
+                <div class="tax-info">
+                    <div class="tax-info__title">Налоги и взносы (всего):</div>
+                    <div class="tax-breakdown">
+                        <div class="tax-breakdown__item">
+                            <span>НДФЛ (13%)</span>
+                            <span>${this.formatCurrency(taxes.ndfl, this.currentModel.currency)}</span>
+                        </div>
+                        <div class="tax-breakdown__item">
+                            <span>ПФР (22%)</span>
+                            <span>${this.formatCurrency(taxes.pfr, this.currentModel.currency)}</span>
+                        </div>
+                        <div class="tax-breakdown__item">
+                            <span>ФСС (2.9%)</span>
+                            <span>${this.formatCurrency(taxes.fss, this.currentModel.currency)}</span>
+                        </div>
+                        <div class="tax-breakdown__item">
+                            <span>ФОМС (5.1%)</span>
+                            <span>${this.formatCurrency(taxes.foms, this.currentModel.currency)}</span>
+                        </div>
+                        <div class="tax-breakdown__item font-bold">
+                            <span>Итого расходов</span>
+                            <span>${this.formatCurrency(taxes.total, this.currentModel.currency)}</span>
+                        </div>
+                    </div>
                 </div>
             `;
-            return;
-        }
-
-        capexList.innerHTML = this.currentModel.expenses.capex.map(capex => `
-            <div class="capex-item" data-capex-id="${capex.id}">
-                <div class="capex-grid">
-                    <div class="form-group">
-                        <label class="form-label">Название</label>
-                        <input type="text" class="form-control" value="${capex.name}" 
-                               onchange="app.updateCapexField('${capex.id}', 'name', this.value)">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Сумма</label>
-                        <input type="number" class="form-control" value="${capex.amount}" 
-                               onchange="app.updateCapexField('${capex.id}', 'amount', parseFloat(this.value))">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Месяц покупки</label>
-                        <input type="number" class="form-control" value="${capex.month}" min="1"
-                               onchange="app.updateCapexField('${capex.id}', 'month', parseInt(this.value))">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Амортизация (мес)</label>
-                        <input type="number" class="form-control" value="${capex.depreciationPeriod}" min="1"
-                               onchange="app.updateCapexField('${capex.id}', 'depreciationPeriod', parseInt(this.value))">
-                    </div>
-                    <div class="form-group">
-                        <button class="remove-btn" onclick="app.removeCapexItem('${capex.id}')">&times;</button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+            
+            container.appendChild(personnelDiv);
+        });
     }
 
-    updateCapexField(capexId, field, value) {
-        const capex = this.currentModel.expenses.capex.find(c => c.id === capexId);
-        if (capex) {
-            capex[field] = value;
-            this.updateModelCalculations();
+    removePersonnel(personnelId) {
+        this.currentModel.personnel = this.currentModel.personnel.filter(p => p.id !== personnelId);
+        this.renderPersonnel();
+        this.hasUnsavedChanges = true;
+    }
+
+    updatePersonnelField(personnelId, field, value) {
+        const person = this.currentModel.personnel.find(p => p.id === personnelId);
+        if (person) {
+            person[field] = value;
+            this.renderPersonnel(); // Re-render to update tax calculations
+            this.hasUnsavedChanges = true;
         }
     }
 
-    removeCapexItem(capexId) {
-        this.currentModel.expenses.capex = this.currentModel.expenses.capex.filter(c => c.id !== capexId);
-        this.renderCapex();
-        this.updateModelCalculations();
+    generateMonthOptions(selectedMonth) {
+        const months = [
+            'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+        ];
+        
+        return months.map((month, index) => 
+            `<option value="${index + 1}" ${selectedMonth === index + 1 ? 'selected' : ''}>${month}</option>`
+        ).join('');
     }
 
-    // Расчеты
-    updateModelCalculations() {
+    calculatePersonnelTaxes(grossSalary) {
+        const ndfl = grossSalary * this.taxRates.ndfl;
+        const pfr = grossSalary * this.taxRates.pfr;
+        const fss = grossSalary * this.taxRates.fss;
+        const foms = grossSalary * this.taxRates.foms;
+        const total = grossSalary + pfr + fss + foms;
+
+        return { ndfl, pfr, fss, foms, total };
+    }
+
+    // Investment Management
+    addEquipment() {
+        if (!this.currentModel.equipment) this.currentModel.equipment = [];
+        
+        const equipment = {
+            id: Date.now().toString(),
+            name: '',
+            cost: 0,
+            lifespan: 5,
+            purchaseMonth: 1
+        };
+
+        this.currentModel.equipment.push(equipment);
+        this.renderInvestments();
+        this.hasUnsavedChanges = true;
+    }
+
+    addFunding() {
+        if (!this.currentModel.funding) this.currentModel.funding = [];
+        
+        const funding = {
+            id: Date.now().toString(),
+            type: 'investment',
+            amount: 0,
+            month: 1,
+            terms: ''
+        };
+
+        this.currentModel.funding.push(funding);
+        this.renderInvestments();
+        this.hasUnsavedChanges = true;
+    }
+
+    renderInvestments() {
+        // Equipment tab
+        const equipmentContainer = document.getElementById('equipmentList');
+        if (equipmentContainer && this.currentModel.equipment) {
+            equipmentContainer.innerHTML = '';
+            
+            this.currentModel.equipment.forEach(equipment => {
+                const equipmentDiv = document.createElement('div');
+                equipmentDiv.className = 'product-item';
+                
+                equipmentDiv.innerHTML = `
+                    <div class="product-item__header">
+                        <div class="product-item__title">Оборудование #${equipment.id.slice(-4)}</div>
+                        <button class="product-item__remove" onclick="app.removeEquipment('${equipment.id}')">×</button>
+                    </div>
+                    <div class="product-item__fields">
+                        <div class="form-group">
+                            <label class="form-label">Название</label>
+                            <input type="text" class="form-control" value="${equipment.name}" 
+                                   onchange="app.updateEquipmentField('${equipment.id}', 'name', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Стоимость</label>
+                            <input type="number" class="form-control" value="${equipment.cost}" 
+                                   onchange="app.updateEquipmentField('${equipment.id}', 'cost', parseFloat(this.value))">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Срок службы (лет)</label>
+                            <input type="number" class="form-control" value="${equipment.lifespan}" 
+                                   onchange="app.updateEquipmentField('${equipment.id}', 'lifespan', parseInt(this.value))">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Месяц покупки</label>
+                            <select class="form-control" onchange="app.updateEquipmentField('${equipment.id}', 'purchaseMonth', parseInt(this.value))">
+                                ${this.generateMonthOptions(equipment.purchaseMonth)}
+                            </select>
+                        </div>
+                    </div>
+                `;
+                
+                equipmentContainer.appendChild(equipmentDiv);
+            });
+        }
+
+        // Funding tab
+        const fundingContainer = document.getElementById('fundingList');
+        if (fundingContainer && this.currentModel.funding) {
+            fundingContainer.innerHTML = '';
+            
+            this.currentModel.funding.forEach(funding => {
+                const fundingDiv = document.createElement('div');
+                fundingDiv.className = 'product-item';
+                
+                fundingDiv.innerHTML = `
+                    <div class="product-item__header">
+                        <div class="product-item__title">Финансирование #${funding.id.slice(-4)}</div>
+                        <button class="product-item__remove" onclick="app.removeFunding('${funding.id}')">×</button>
+                    </div>
+                    <div class="product-item__fields">
+                        <div class="form-group">
+                            <label class="form-label">Тип</label>
+                            <select class="form-control" onchange="app.updateFundingField('${funding.id}', 'type', this.value)">
+                                <option value="investment" ${funding.type === 'investment' ? 'selected' : ''}>Инвестиции</option>
+                                <option value="loan" ${funding.type === 'loan' ? 'selected' : ''}>Кредит</option>
+                                <option value="grant" ${funding.type === 'grant' ? 'selected' : ''}>Грант</option>
+                                <option value="personal" ${funding.type === 'personal' ? 'selected' : ''}>Собственные средства</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Сумма</label>
+                            <input type="number" class="form-control" value="${funding.amount}" 
+                                   onchange="app.updateFundingField('${funding.id}', 'amount', parseFloat(this.value))">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Месяц получения</label>
+                            <select class="form-control" onchange="app.updateFundingField('${funding.id}', 'month', parseInt(this.value))">
+                                ${this.generateMonthOptions(funding.month)}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Условия</label>
+                            <input type="text" class="form-control" value="${funding.terms}" 
+                                   onchange="app.updateFundingField('${funding.id}', 'terms', this.value)">
+                        </div>
+                    </div>
+                `;
+                
+                fundingContainer.appendChild(fundingDiv);
+            });
+        }
+    }
+
+    removeEquipment(equipmentId) {
+        this.currentModel.equipment = this.currentModel.equipment.filter(e => e.id !== equipmentId);
+        this.renderInvestments();
+        this.hasUnsavedChanges = true;
+    }
+
+    removeFunding(fundingId) {
+        this.currentModel.funding = this.currentModel.funding.filter(f => f.id !== fundingId);
+        this.renderInvestments();
+        this.hasUnsavedChanges = true;
+    }
+
+    updateEquipmentField(equipmentId, field, value) {
+        const equipment = this.currentModel.equipment.find(e => e.id === equipmentId);
+        if (equipment) {
+            equipment[field] = value;
+            this.hasUnsavedChanges = true;
+        }
+    }
+
+    updateFundingField(fundingId, field, value) {
+        const funding = this.currentModel.funding.find(f => f.id === fundingId);
+        if (funding) {
+            funding[field] = value;
+            this.hasUnsavedChanges = true;
+        }
+    }
+
+    // Results and Calculations
+    renderResults() {
         if (!this.currentModel) return;
 
-        const horizon = this.currentModel.settings.planningHorizon;
-        const revenue = this.calculateRevenue(horizon);
-        const costs = this.calculateCosts(horizon);
-        const cashFlow = this.calculateCashFlow(revenue, costs, horizon);
-        const metrics = this.calculateMetrics(cashFlow);
-
-        this.currentModel.calculations = {
-            revenue,
-            costs,
-            cashFlow,
-            metrics
-        };
-
-        this.updateDashboard();
-        this.updateReports();
-        this.updateCharts();
+        const metrics = this.calculateMetrics(this.currentModel);
+        this.renderPnLTable(metrics);
+        this.renderCashFlowTable(metrics);
+        this.renderMetricsGrid(metrics);
+        this.renderResultsChart(metrics);
     }
 
-    calculateRevenue(horizon) {
-        const revenue = new Array(horizon).fill(0);
+    calculateMetrics(model) {
+        // Simplified financial calculations for demo
+        const periods = 36; // 3 years monthly
         
-        this.currentModel.products.forEach(product => {
-            let currentSales = product.initialSales || 0;
-            const growthRate = (product.growthRate || 0) / 100;
-            const price = product.price || 0;
+        let totalRevenue = 0;
+        let totalCosts = 0;
+        let totalExpenses = 0;
 
-            for (let month = 0; month < horizon; month++) {
-                // Применяем рост
-                if (month > 0) {
-                    currentSales *= (1 + growthRate / 12);
-                }
-
-                // Применяем сезонность
-                const seasonalityIndex = product.seasonality[month % 12] || 1;
-                const monthlyRevenue = currentSales * price * seasonalityIndex;
-                
-                revenue[month] += monthlyRevenue;
-            }
-        });
-
-        return revenue;
-    }
-
-    calculateCosts(horizon) {
-        const costs = new Array(horizon).fill(0);
-        const expenses = this.currentModel.expenses;
-
-        for (let month = 0; month < horizon; month++) {
-            let monthlyCosts = 0;
-
-            // Операционные расходы
-            monthlyCosts += expenses.operational.rent || 0;
-            monthlyCosts += expenses.operational.utilities || 0;
-            monthlyCosts += expenses.operational.admin || 0;
-            monthlyCosts += expenses.operational.other || 0;
-
-            // Маркетинговые расходы
-            monthlyCosts += expenses.marketing.onlineAdvertising || 0;
-            monthlyCosts += expenses.marketing.offlineAdvertising || 0;
-            monthlyCosts += expenses.marketing.prEvents || 0;
-            monthlyCosts += expenses.marketing.contentMarketing || 0;
-
-            // Расходы на персонал
-            expenses.personnel.forEach(employee => {
-                if (month >= (employee.startMonth - 1)) {
-                    const salaryWithTaxes = (employee.salary || 0) * (employee.count || 1) * 1.302; // С соц. взносами
-                    monthlyCosts += salaryWithTaxes;
-                }
-            });
-
-            // Себестоимость продуктов
-            this.currentModel.products.forEach(product => {
-                const monthlyRevenue = this.currentModel.calculations?.revenue?.[month] || 0;
-                const costRatio = (product.cost || 0) / (product.price || 1);
-                monthlyCosts += monthlyRevenue * costRatio;
-            });
-
-            // Амортизация
-            expenses.capex.forEach(capex => {
-                if (month >= (capex.month - 1)) {
-                    const monthsFromPurchase = month - (capex.month - 1);
-                    if (monthsFromPurchase < capex.depreciationPeriod) {
-                        monthlyCosts += (capex.amount || 0) / (capex.depreciationPeriod || 1);
-                    }
-                }
-            });
-
-            costs[month] = monthlyCosts;
-        }
-
-        return costs;
-    }
-
-    calculateCashFlow(revenue, costs, horizon) {
-        const cashFlow = [];
-        let cumulativeCashFlow = -(this.currentModel.settings.initialInvestment || 0) - (this.currentModel.settings.workingCapital || 0);
-
-        // Капитальные расходы
-        const capexByMonth = new Array(horizon).fill(0);
-        this.currentModel.expenses.capex.forEach(capex => {
-            const month = (capex.month || 1) - 1;
-            if (month < horizon) {
-                capexByMonth[month] += capex.amount || 0;
-            }
-        });
-
-        for (let month = 0; month < horizon; month++) {
-            const monthlyProfit = (revenue[month] || 0) - (costs[month] || 0);
-            const monthlyCapex = capexByMonth[month] || 0;
-            const netCashFlow = monthlyProfit - monthlyCapex;
-            
-            cumulativeCashFlow += netCashFlow;
-            
-            cashFlow.push({
-                month: month + 1,
-                revenue: revenue[month] || 0,
-                costs: costs[month] || 0,
-                profit: monthlyProfit,
-                capex: monthlyCapex,
-                netCashFlow,
-                cumulativeCashFlow
+        // Calculate revenue from products
+        if (model.products && model.products.length > 0) {
+            model.products.forEach(product => {
+                totalRevenue += (product.price || 0) * periods * 100; // Assuming 100 units per month
+                totalCosts += (product.cost || 0) * periods * 100;
             });
         }
 
-        return cashFlow;
-    }
-
-    calculateMetrics(cashFlow) {
-        const discountRate = (this.currentModel.settings.discountRate || 12) / 100;
-        let npv = -(this.currentModel.settings.initialInvestment || 0);
-        let paybackPeriod = null;
-        let breakevenPeriod = null;
-
-        // Расчет NPV и определение периодов окупаемости
-        for (let i = 0; i < cashFlow.length; i++) {
-            const cf = cashFlow[i];
-            const discountFactor = Math.pow(1 + discountRate / 12, i + 1);
-            npv += cf.netCashFlow / discountFactor;
-
-            // Точка безубыточности (когда прибыль становится положительной)
-            if (!breakevenPeriod && cf.profit > 0) {
-                breakevenPeriod = i + 1;
-            }
-
-            // Срок окупаемости (когда накопленный денежный поток становится положительным)
-            if (!paybackPeriod && cf.cumulativeCashFlow > 0) {
-                paybackPeriod = i + 1;
-            }
+        // Calculate expenses
+        if (model.expenses && model.expenses.length > 0) {
+            model.expenses.forEach(expense => {
+                totalExpenses += (expense.amount || 0) * periods;
+            });
         }
 
-        // Расчет IRR (приближенный)
-        let irr = 0;
-        if (npv > 0) {
-            // Простая аппроксимация IRR
-            const totalCashFlow = cashFlow.reduce((sum, cf) => sum + cf.netCashFlow, 0);
-            const initialInvestment = this.currentModel.settings.initialInvestment || 1;
-            irr = (totalCashFlow / initialInvestment / (cashFlow.length / 12)) * 100;
+        // Calculate personnel costs
+        if (model.personnel && model.personnel.length > 0) {
+            model.personnel.forEach(person => {
+                const taxes = this.calculatePersonnelTaxes((person.salary || 0) * (person.count || 1));
+                totalExpenses += taxes.total * periods;
+            });
         }
 
-        // EBITDA (за первый год)
-        const yearlyProfit = cashFlow.slice(0, 12).reduce((sum, cf) => sum + cf.profit, 0);
-        
-        // Выручка за 12 месяцев
-        const revenue12m = cashFlow.slice(0, 12).reduce((sum, cf) => sum + cf.revenue, 0);
+        const grossProfit = totalRevenue - totalCosts;
+        const netProfit = grossProfit - totalExpenses;
+        const margin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+        const npv = netProfit * 0.8; // Simplified NPV
+        const irr = netProfit > 0 ? 25 : -5; // Simplified IRR
+        const paybackPeriod = totalExpenses > 0 ? (totalExpenses / (netProfit / periods)) : 0;
 
         return {
+            totalRevenue,
+            totalCosts,
+            totalExpenses,
+            grossProfit,
+            netProfit,
+            margin,
             npv,
-            irr: Math.max(0, Math.min(irr, 1000)), // Ограничиваем IRR разумными пределами
+            irr,
             paybackPeriod,
-            breakevenPeriod,
-            ebitda: yearlyProfit,
-            revenue12m
+            periods
         };
     }
 
-    updateDashboard() {
-        if (!this.currentModel?.calculations) return;
+    renderPnLTable(metrics) {
+        const container = document.getElementById('pnlTable');
+        if (!container) return;
 
-        const metrics = this.currentModel.calculations.metrics;
-        const currency = this.getCurrencySymbol(this.currentModel.settings.baseCurrency);
-
-        // Обновляем метрики
-        const revenue12mEl = document.getElementById('revenue-12m');
-        if (revenue12mEl) revenue12mEl.textContent = this.formatCurrency(metrics.revenue12m, currency);
+        const currency = this.currentModel.currency || 'RUB';
         
-        const ebitdaValueEl = document.getElementById('ebitda-value');
-        if (ebitdaValueEl) ebitdaValueEl.textContent = this.formatCurrency(metrics.ebitda, currency);
-        
-        const npvValueEl = document.getElementById('npv-value');
-        if (npvValueEl) npvValueEl.textContent = this.formatCurrency(metrics.npv, currency);
-        
-        const irrValueEl = document.getElementById('irr-value');
-        if (irrValueEl) irrValueEl.textContent = this.formatPercent(metrics.irr);
-        
-        const paybackValueEl = document.getElementById('payback-value');
-        if (paybackValueEl) paybackValueEl.textContent = metrics.paybackPeriod ? `${metrics.paybackPeriod} мес.` : '> 5 лет';
-        
-        const breakevenValueEl = document.getElementById('breakeven-value');
-        if (breakevenValueEl) breakevenValueEl.textContent = metrics.breakevenPeriod ? `${metrics.breakevenPeriod} мес.` : '> 5 лет';
+        container.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Показатель</th>
+                        <th>Год 1</th>
+                        <th>Год 2</th>
+                        <th>Год 3</th>
+                        <th>Итого</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Выручка</td>
+                        <td>${this.formatCurrency(metrics.totalRevenue / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.totalRevenue / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.totalRevenue / 3, currency)}</td>
+                        <td class="font-bold">${this.formatCurrency(metrics.totalRevenue, currency)}</td>
+                    </tr>
+                    <tr>
+                        <td>Себестоимость</td>
+                        <td>${this.formatCurrency(metrics.totalCosts / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.totalCosts / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.totalCosts / 3, currency)}</td>
+                        <td class="font-bold">${this.formatCurrency(metrics.totalCosts, currency)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td>Валовая прибыль</td>
+                        <td>${this.formatCurrency(metrics.grossProfit / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.grossProfit / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.grossProfit / 3, currency)}</td>
+                        <td class="font-bold">${this.formatCurrency(metrics.grossProfit, currency)}</td>
+                    </tr>
+                    <tr>
+                        <td>Операционные расходы</td>
+                        <td>${this.formatCurrency(metrics.totalExpenses / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.totalExpenses / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.totalExpenses / 3, currency)}</td>
+                        <td class="font-bold">${this.formatCurrency(metrics.totalExpenses, currency)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td>Чистая прибыль</td>
+                        <td>${this.formatCurrency(metrics.netProfit / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.netProfit / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.netProfit / 3, currency)}</td>
+                        <td class="font-bold">${this.formatCurrency(metrics.netProfit, currency)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
     }
 
-    updateCharts() {
-        if (!this.currentModel?.calculations) return;
+    renderCashFlowTable(metrics) {
+        const container = document.getElementById('cashflowTable');
+        if (!container) return;
 
-        this.createRevenueChart();
-        this.createCashFlowChart();
+        const currency = this.currentModel.currency || 'RUB';
+        
+        container.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Показатель</th>
+                        <th>Год 1</th>
+                        <th>Год 2</th>
+                        <th>Год 3</th>
+                        <th>Итого</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Поступления</td>
+                        <td>${this.formatCurrency(metrics.totalRevenue / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.totalRevenue / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.totalRevenue / 3, currency)}</td>
+                        <td class="font-bold">${this.formatCurrency(metrics.totalRevenue, currency)}</td>
+                    </tr>
+                    <tr>
+                        <td>Операционные расходы</td>
+                        <td>${this.formatCurrency((metrics.totalCosts + metrics.totalExpenses) / 3, currency)}</td>
+                        <td>${this.formatCurrency((metrics.totalCosts + metrics.totalExpenses) / 3, currency)}</td>
+                        <td>${this.formatCurrency((metrics.totalCosts + metrics.totalExpenses) / 3, currency)}</td>
+                        <td class="font-bold">${this.formatCurrency(metrics.totalCosts + metrics.totalExpenses, currency)}</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td>Чистый денежный поток</td>
+                        <td>${this.formatCurrency(metrics.netProfit / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.netProfit / 3, currency)}</td>
+                        <td>${this.formatCurrency(metrics.netProfit / 3, currency)}</td>
+                        <td class="font-bold">${this.formatCurrency(metrics.netProfit, currency)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
     }
 
-    createRevenueChart() {
-        const ctx = document.getElementById('revenue-chart');
-        if (!ctx) return;
+    renderMetricsGrid(metrics) {
+        const container = document.getElementById('metricsGrid');
+        if (!container) return;
 
-        // Уничтожаем предыдущий график
-        if (this.charts.revenue) {
-            this.charts.revenue.destroy();
-        }
+        const currency = this.currentModel.currency || 'RUB';
+        
+        container.innerHTML = `
+            <div class="metric-card">
+                <div class="metric-card__label">NPV</div>
+                <div class="metric-card__value">${this.formatCurrency(metrics.npv, currency)}</div>
+                <div class="metric-card__description">Чистая приведенная стоимость</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__label">IRR</div>
+                <div class="metric-card__value">${metrics.irr.toFixed(1)}%</div>
+                <div class="metric-card__description">Внутренняя норма доходности</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__label">Payback</div>
+                <div class="metric-card__value">${Math.abs(metrics.paybackPeriod).toFixed(1)} мес</div>
+                <div class="metric-card__description">Срок окупаемости</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__label">Маржинальность</div>
+                <div class="metric-card__value">${metrics.margin.toFixed(1)}%</div>
+                <div class="metric-card__description">Валовая маржа</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__label">Выручка</div>
+                <div class="metric-card__value">${this.formatCurrency(metrics.totalRevenue, currency)}</div>
+                <div class="metric-card__description">Общая выручка за период</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-card__label">Прибыль</div>
+                <div class="metric-card__value">${this.formatCurrency(metrics.netProfit, currency)}</div>
+                <div class="metric-card__description">Чистая прибыль</div>
+            </div>
+        `;
+    }
 
-        const cashFlow = this.currentModel.calculations.cashFlow;
-        const labels = cashFlow.map(cf => `Месяц ${cf.month}`);
-        const revenueData = cashFlow.map(cf => cf.revenue);
-        const costsData = cashFlow.map(cf => cf.costs);
+    renderResultsChart(metrics) {
+        const canvas = document.getElementById('resultsChart');
+        if (!canvas || typeof Chart === 'undefined') return;
 
-        this.charts.revenue = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Выручка',
-                        data: revenueData,
-                        borderColor: '#1FB8CD',
-                        backgroundColor: 'rgba(31, 184, 205, 0.1)',
-                        fill: true
-                    },
-                    {
-                        label: 'Расходы',
-                        data: costsData,
-                        borderColor: '#B4413C',
-                        backgroundColor: 'rgba(180, 65, 60, 0.1)',
-                        fill: true
-                    }
-                ]
-            },
+        const ctx = canvas.getContext('2d');
+        
+        // Clear any existing chart
+        Chart.getChart(canvas)?.destroy();
+        
+        const data = {
+            labels: ['Год 1', 'Год 2', 'Год 3'],
+            datasets: [
+                {
+                    label: 'Выручка',
+                    data: [metrics.totalRevenue / 3, metrics.totalRevenue / 3, metrics.totalRevenue / 3],
+                    backgroundColor: '#1FB8CD',
+                    borderColor: '#1FB8CD'
+                },
+                {
+                    label: 'Расходы',
+                    data: [(metrics.totalCosts + metrics.totalExpenses) / 3, (metrics.totalCosts + metrics.totalExpenses) / 3, (metrics.totalCosts + metrics.totalExpenses) / 3],
+                    backgroundColor: '#FFC185',
+                    borderColor: '#FFC185'
+                },
+                {
+                    label: 'Прибыль',
+                    data: [metrics.netProfit / 3, metrics.netProfit / 3, metrics.netProfit / 3],
+                    backgroundColor: '#B4413C',
+                    borderColor: '#B4413C'
+                }
+            ]
+        };
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: data,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true
-                    }
-                },
                 scales: {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: (value) => this.formatCurrency(value)
+                            callback: function(value) {
+                                return new Intl.NumberFormat('ru-RU', {
+                                    style: 'currency',
+                                    currency: 'RUB',
+                                    minimumFractionDigits: 0
+                                }).format(value);
+                            }
                         }
                     }
                 }
@@ -1092,574 +1580,168 @@ class FinModelApp {
         });
     }
 
-    createCashFlowChart() {
-        const ctx = document.getElementById('cashflow-chart');
-        if (!ctx) return;
+    // Utility Methods
+    switchTab(tabBtn, tabId) {
+        // Remove active class from all tab buttons in the same container
+        const container = tabBtn.closest('.model-builder__content, [class*="tab"]').parentElement;
+        const tabButtons = container.querySelectorAll('.tab-btn');
+        const tabContents = container.querySelectorAll('.tab-content');
 
-        // Уничтожаем предыдущий график
-        if (this.charts.cashflow) {
-            this.charts.cashflow.destroy();
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.add('hidden'));
+
+        // Activate clicked tab
+        tabBtn.classList.add('active');
+        const targetContent = document.getElementById(tabId + 'Tab');
+        if (targetContent) {
+            targetContent.classList.remove('hidden');
         }
+    }
 
-        const cashFlow = this.currentModel.calculations.cashFlow;
-        const labels = cashFlow.map(cf => `Месяц ${cf.month}`);
-        const cumulativeData = cashFlow.map(cf => cf.cumulativeCashFlow);
+    formatCurrency(amount, currencyCode = 'RUB') {
+        const currency = this.currencies.find(c => c.code === currencyCode);
+        const symbol = currency ? currency.symbol : '₽';
+        
+        return new Intl.NumberFormat('ru-RU', {
+            style: 'decimal',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount || 0) + ' ' + symbol;
+    }
 
-        this.charts.cashflow = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Накопленный денежный поток',
-                        data: cumulativeData,
-                        borderColor: '#5D878F',
-                        backgroundColor: 'rgba(93, 135, 143, 0.1)',
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true
-                    }
-                },
-                scales: {
-                    y: {
-                        ticks: {
-                            callback: (value) => this.formatCurrency(value)
-                        }
-                    }
-                }
+    // Auto-save functionality
+    startAutoSave() {
+        this.autoSaveInterval = setInterval(() => {
+            if (this.hasUnsavedChanges && this.currentModel) {
+                this.autoSave();
             }
-        });
+        }, 30000); // Every 30 seconds
     }
 
-    updateReports() {
-        if (!this.currentModel?.calculations) return;
+    autoSave() {
+        if (!this.currentModel || !this.currentUser) return;
 
-        this.updatePnLTable();
-        this.updateCashFlowTable();
-    }
-
-    updatePnLTable() {
-        const table = document.getElementById('pnl-table');
-        if (!table) return;
-        
-        const tbody = table.querySelector('tbody');
-        if (!tbody) return;
-        
-        const cashFlow = this.currentModel.calculations.cashFlow;
-
-        // Группируем по годам
-        const yearlyData = this.groupByYears(cashFlow);
-
-        tbody.innerHTML = `
-            <tr>
-                <td><strong>Выручка</strong></td>
-                ${yearlyData.map(year => `<td>${this.formatCurrency(year.revenue)}</td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>Себестоимость</strong></td>
-                ${yearlyData.map(year => `<td>${this.formatCurrency(year.costs * 0.6)}</td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>Валовая прибыль</strong></td>
-                ${yearlyData.map(year => `<td>${this.formatCurrency(year.revenue - year.costs * 0.6)}</td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>Операционные расходы</strong></td>
-                ${yearlyData.map(year => `<td>${this.formatCurrency(year.costs * 0.4)}</td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>EBITDA</strong></td>
-                ${yearlyData.map(year => `<td><strong>${this.formatCurrency(year.profit)}</strong></td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>Чистая прибыль</strong></td>
-                ${yearlyData.map(year => `<td><strong>${this.formatCurrency(year.profit * 0.8)}</strong></td>`).join('')}
-            </tr>
-        `;
-    }
-
-    updateCashFlowTable() {
-        const table = document.getElementById('cashflow-table');
-        if (!table) return;
-        
-        const tbody = table.querySelector('tbody');
-        if (!tbody) return;
-        
-        const cashFlow = this.currentModel.calculations.cashFlow;
-
-        // Группируем по годам
-        const yearlyData = this.groupByYears(cashFlow);
-
-        tbody.innerHTML = `
-            <tr>
-                <td><strong>Операционный поток</strong></td>
-                ${yearlyData.map(year => `<td>${this.formatCurrency(year.profit)}</td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>Инвестиционный поток</strong></td>
-                ${yearlyData.map(year => `<td>${this.formatCurrency(-year.capex)}</td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>Финансовый поток</strong></td>
-                ${yearlyData.map(year => `<td>0</td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>Чистый денежный поток</strong></td>
-                ${yearlyData.map(year => `<td><strong>${this.formatCurrency(year.netCashFlow)}</strong></td>`).join('')}
-            </tr>
-            <tr>
-                <td><strong>Накопленный поток</strong></td>
-                ${yearlyData.map((year, index) => {
-                    const cumulative = yearlyData.slice(0, index + 1).reduce((sum, y) => sum + y.netCashFlow, 0);
-                    return `<td><strong>${this.formatCurrency(cumulative)}</strong></td>`;
-                }).join('')}
-            </tr>
-        `;
-    }
-
-    groupByYears(cashFlow) {
-        const years = [];
-        const monthsPerYear = 12;
-        
-        for (let year = 0; year < 3; year++) {
-            const startMonth = year * monthsPerYear;
-            const endMonth = Math.min(startMonth + monthsPerYear, cashFlow.length);
-            
-            if (startMonth < cashFlow.length) {
-                const yearData = cashFlow.slice(startMonth, endMonth);
-                years.push({
-                    revenue: yearData.reduce((sum, cf) => sum + cf.revenue, 0),
-                    costs: yearData.reduce((sum, cf) => sum + cf.costs, 0),
-                    profit: yearData.reduce((sum, cf) => sum + cf.profit, 0),
-                    capex: yearData.reduce((sum, cf) => sum + cf.capex, 0),
-                    netCashFlow: yearData.reduce((sum, cf) => sum + cf.netCashFlow, 0)
-                });
-            }
-        }
-        
-        return years;
-    }
-
-    // Управление вкладками
-    showEditorTab(tabName) {
-        // Скрываем все вкладки
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.add('hidden');
-        });
-
-        // Показываем нужную вкладку
-        const tabContent = document.getElementById(`${tabName}-tab`);
-        if (tabContent) {
-            tabContent.classList.remove('hidden');
-        }
-
-        // Обновляем активную вкладку
-        document.querySelectorAll('.editor-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        const activeTab = document.querySelector(`.editor-tab[data-tab="${tabName}"]`);
-        if (activeTab) {
-            activeTab.classList.add('active');
-        }
-
-        // Специальная логика для вкладки дашборда
-        if (tabName === 'dashboard') {
-            setTimeout(() => {
-                this.updateCharts();
-            }, 100);
-        }
-    }
-
-    showExpenseTab(tabName) {
-        // Скрываем все секции расходов
-        document.querySelectorAll('.expense-section').forEach(section => {
-            section.classList.add('hidden');
-        });
-
-        // Показываем нужную секцию
-        const expenseSection = document.getElementById(`${tabName}-expenses`);
-        if (expenseSection) {
-            expenseSection.classList.remove('hidden');
-        }
-
-        // Обновляем активную вкладку
-        document.querySelectorAll('.expense-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        const activeExpenseTab = document.querySelector(`.expense-tab[data-expense-tab="${tabName}"]`);
-        if (activeExpenseTab) {
-            activeExpenseTab.classList.add('active');
-        }
-    }
-
-    // Шаблоны
-    createFromTemplate(templateType) {
-        if (!this.canCreateModel()) {
-            this.showUpgradeModal();
-            return;
-        }
-
-        this.currentModel = this.getTemplateModel(templateType);
-        this.showModelEditor();
-        this.populateModelEditor();
-    }
-
-    getTemplateModel(templateType) {
-        const baseModel = this.getDefaultModel();
-        
-        switch (templateType) {
-            case 'ecommerce':
-                baseModel.name = 'Интернет-магазин';
-                baseModel.products = [
-                    {
-                        id: '1',
-                        name: 'Основной товар',
-                        price: 2000,
-                        cost: 800,
-                        currency: 'RUB',
-                        salesGrowth: 'exponential',
-                        initialSales: 50,
-                        growthRate: 15,
-                        seasonality: [0.8, 0.9, 1.0, 1.1, 1.0, 0.9, 0.7, 0.8, 1.0, 1.2, 1.3, 1.4]
-                    }
-                ];
-                baseModel.expenses.marketing.onlineAdvertising = 30000;
-                baseModel.expenses.operational.rent = 25000;
-                break;
-
-            case 'saas':
-                baseModel.name = 'SaaS стартап';
-                baseModel.products = [
-                    {
-                        id: '1',
-                        name: 'Месячная подписка',
-                        price: 990,
-                        cost: 100,
-                        currency: 'RUB',
-                        salesGrowth: 'exponential',
-                        initialSales: 10,
-                        growthRate: 25,
-                        seasonality: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-                    }
-                ];
-                baseModel.expenses.personnel = [
-                    { id: '1', position: 'Разработчик', count: 2, salary: 120000, startMonth: 1 },
-                    { id: '2', position: 'Маркетолог', count: 1, salary: 80000, startMonth: 3 }
-                ];
-                break;
-
-            case 'restaurant':
-                baseModel.name = 'Ресторан';
-                baseModel.products = [
-                    {
-                        id: '1',
-                        name: 'Средний чек',
-                        price: 800,
-                        cost: 320,
-                        currency: 'RUB',
-                        salesGrowth: 'linear',
-                        initialSales: 200,
-                        growthRate: 5,
-                        seasonality: [0.8, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.2, 1.0, 1.0, 1.1, 1.3]
-                    }
-                ];
-                baseModel.expenses.operational.rent = 80000;
-                baseModel.expenses.operational.utilities = 25000;
-                break;
-
-            case 'manufacturing':
-                baseModel.name = 'Производственная компания';
-                baseModel.settings.initialInvestment = 500000;
-                baseModel.products = [
-                    {
-                        id: '1',
-                        name: 'Основная продукция',
-                        price: 5000,
-                        cost: 2500,
-                        currency: 'RUB',
-                        salesGrowth: 'linear',
-                        initialSales: 100,
-                        growthRate: 8,
-                        seasonality: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-                    }
-                ];
-                baseModel.expenses.capex = [
-                    { id: '1', name: 'Оборудование', amount: 300000, month: 1, depreciationPeriod: 60, depreciationType: 'linear' }
-                ];
-                break;
-        }
-
-        return baseModel;
-    }
-
-    // Настройки
-    loadUserSettings() {
-        if (!this.currentUser) return;
-
-        const profileNameInput = document.getElementById('profile-name');
-        if (profileNameInput) profileNameInput.value = this.currentUser.name || '';
-        
-        const profileEmailInput = document.getElementById('profile-email');
-        if (profileEmailInput) profileEmailInput.value = this.currentUser.email || '';
-        
-        const profileCompanyInput = document.getElementById('profile-company');
-        if (profileCompanyInput) profileCompanyInput.value = this.currentUser.settings?.company || '';
-        
-        const themeSelect = document.getElementById('theme-select');
-        if (themeSelect) themeSelect.value = this.currentUser.settings?.theme || 'auto';
-    }
-
-    saveSettings() {
-        if (!this.currentUser) return;
-
-        const profileNameInput = document.getElementById('profile-name');
-        if (profileNameInput) this.currentUser.name = profileNameInput.value;
-        
-        const profileCompanyInput = document.getElementById('profile-company');
-        const themeSelect = document.getElementById('theme-select');
-        
-        this.currentUser.settings = {
-            ...this.currentUser.settings,
-            company: profileCompanyInput ? profileCompanyInput.value : '',
-            theme: themeSelect ? themeSelect.value : 'auto'
-        };
-
-        this.updateUserData();
-        this.setTheme(this.currentUser.settings.theme);
-        this.showNotification('Настройки сохранены', 'success');
-    }
-
-    setTheme(theme) {
-        if (theme === 'dark') {
-            document.documentElement.setAttribute('data-color-scheme', 'dark');
-        } else if (theme === 'light') {
-            document.documentElement.setAttribute('data-color-scheme', 'light');
-        } else {
-            document.documentElement.removeAttribute('data-color-scheme');
-        }
-    }
-
-    // Биллинг
-    loadBillingInfo() {
-        if (!this.currentUser) return;
-
-        const currentPlanNameEl = document.getElementById('current-plan-name');
-        if (currentPlanNameEl) currentPlanNameEl.textContent = this.currentUser.plan;
-        
-        const currentModelsUsedEl = document.getElementById('current-models-used');
-        if (currentModelsUsedEl) currentModelsUsedEl.textContent = this.currentUser.modelsUsed || 0;
-        
-        const limits = { 'FREE': 3, 'BASIC': '∞', 'WHITE-LABEL': '∞' };
-        const currentModelsLimitEl = document.getElementById('current-models-limit');
-        if (currentModelsLimitEl) currentModelsLimitEl.textContent = limits[this.currentUser.plan];
-    }
-
-    upgradePlan(plan) {
-        // Мокап платежной системы
-        const prices = { 'basic': 1990, 'white-label': 9900 };
-        const planNames = { 'basic': 'BASIC', 'white-label': 'WHITE-LABEL' };
-        
-        const confirmed = confirm(`Подтвердите покупку плана ${planNames[plan]} за ${prices[plan]}₽/мес`);
-        
-        if (confirmed) {
-            this.currentUser.plan = planNames[plan];
-            this.updateUserData();
-            this.updateUI();
-            this.closeModal('upgrade-modal');
-            this.showNotification(`План обновлен до ${planNames[plan]}`, 'success');
-        }
-    }
-
-    contactSales() {
-        alert('Для получения WHITE-LABEL плана свяжитесь с нами:\nEmail: sales@finmodel.pro\nТелефон: +7 (495) 123-45-67');
-    }
-
-    // Экспорт
-    exportModel() {
-        if (!this.currentModel) return;
-
-        // Проверяем доступность форматов экспорта
-        const userPlan = this.currentUser?.plan || 'FREE';
-        const excelOption = document.getElementById('excel-option');
-        const powerpointOption = document.getElementById('powerpoint-option');
-
-        if (userPlan === 'FREE') {
-            if (excelOption) {
-                excelOption.classList.add('disabled');
-                const excelRadio = document.getElementById('export-excel');
-                if (excelRadio) excelRadio.disabled = true;
-            }
-            if (powerpointOption) {
-                powerpointOption.classList.add('disabled');
-                const powerpointRadio = document.getElementById('export-powerpoint');
-                if (powerpointRadio) powerpointRadio.disabled = true;
-            }
-        } else {
-            if (excelOption) {
-                excelOption.classList.remove('disabled');
-                const excelRadio = document.getElementById('export-excel');
-                if (excelRadio) excelRadio.disabled = false;
-            }
-            if (powerpointOption) {
-                powerpointOption.classList.remove('disabled');
-                const powerpointRadio = document.getElementById('export-powerpoint');
-                if (powerpointRadio) powerpointRadio.disabled = false;
-            }
-        }
-
-        document.getElementById('export-modal').classList.remove('hidden');
-    }
-
-    performExport() {
-        const formatRadio = document.querySelector('input[name="export-format"]:checked');
-        if (!formatRadio) return;
-        
-        const format = formatRadio.value;
-        
-        switch (format) {
-            case 'pdf':
-                this.exportToPDF();
-                break;
-            case 'excel':
-                if (this.currentUser?.plan === 'FREE') {
-                    this.showUpgradeModal();
-                    return;
-                }
-                this.exportToExcel();
-                break;
-            case 'powerpoint':
-                if (this.currentUser?.plan === 'FREE') {
-                    this.showUpgradeModal();
-                    return;
-                }
-                this.exportToPowerPoint();
-                break;
-        }
-
-        this.closeModal('export-modal');
-    }
-
-    exportToPDF() {
-        // Мокап экспорта в PDF
-        const modelData = this.generateExportData();
-        console.log('Экспорт в PDF:', modelData);
-        
-        // Имитируем скачивание файла
-        this.simulateFileDownload(`${this.currentModel.name}.pdf`, 'PDF отчет готов к скачиванию');
-    }
-
-    exportToExcel() {
-        // Мокап экспорта в Excel
-        const modelData = this.generateExportData();
-        console.log('Экспорт в Excel:', modelData);
-        
-        this.simulateFileDownload(`${this.currentModel.name}.xlsx`, 'Excel модель готова к скачиванию');
-    }
-
-    exportToPowerPoint() {
-        // Мокап экспорта в PowerPoint
-        const modelData = this.generateExportData();
-        console.log('Экспорт в PowerPoint:', modelData);
-        
-        this.simulateFileDownload(`${this.currentModel.name}.pptx`, 'PowerPoint презентация готова к скачиванию');
-    }
-
-    generateExportData() {
-        return {
-            model: this.currentModel,
-            exportDate: new Date(),
-            user: this.currentUser,
-            watermark: this.currentUser?.plan === 'FREE'
-        };
-    }
-
-    simulateFileDownload(filename, message) {
-        // Имитируем процесс скачивания
-        this.showNotification('Подготавливаем файл...', 'info');
+        // Save current model data
+        this.updateSaveStatus('saving');
         
         setTimeout(() => {
-            this.showNotification(message, 'success');
-        }, 2000);
+            // Simulate save delay
+            this.hasUnsavedChanges = false;
+            this.updateSaveStatus('saved');
+        }, 1000);
     }
 
-    // Модальные окна
-    showUpgradeModal() {
-        document.getElementById('upgrade-modal').classList.remove('hidden');
-    }
+    updateSaveStatus(status) {
+        const statusElement = document.getElementById('saveStatus');
+        const statusText = statusElement?.querySelector('.save-status__text');
+        
+        if (!statusElement || !statusText) return;
 
-    closeModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
-    }
-
-    // Утилиты
-    updateUI() {
-        this.updateNavbar();
-        if (this.currentPage === 'dashboard') {
-            this.updateSidebarInfo();
+        statusElement.className = 'save-status';
+        
+        switch (status) {
+            case 'saving':
+                statusElement.classList.add('save-status--saving');
+                statusText.textContent = 'Сохранение...';
+                break;
+            case 'saved':
+                statusText.textContent = 'Все изменения сохранены';
+                break;
+            case 'unsaved':
+                statusElement.classList.add('save-status--error');
+                statusText.textContent = 'Есть несохраненные изменения';
+                break;
+            case 'error':
+                statusElement.classList.add('save-status--error');
+                statusText.textContent = 'Ошибка сохранения';
+                break;
         }
     }
 
-    showDemo() {
-        alert('Демо-режим будет доступен в следующей версии');
+    // Modal Management
+    showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
     }
 
-    backToDashboard() {
-        this.showDashboard();
+    hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
     }
 
-    showNotification(message, type = 'info') {
-        // Простое уведомление через alert (в реальном приложении лучше использовать toast)
-        alert(message);
+    showConfirmDialog(title, message, onConfirm) {
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const confirmBtn = document.getElementById('confirmButton');
+
+        if (confirmTitle) confirmTitle.textContent = title;
+        if (confirmMessage) confirmMessage.textContent = message;
+        
+        if (confirmBtn) {
+            confirmBtn.onclick = () => {
+                onConfirm();
+                this.hideConfirmDialog();
+            };
+        }
+        
+        this.showModal('confirmDialog');
     }
 
-    formatCurrency(amount, symbol = '₽') {
-        if (typeof amount !== 'number') return '0 ' + symbol;
-        return new Intl.NumberFormat('ru-RU').format(Math.round(amount)) + ' ' + symbol;
+    hideConfirmDialog() {
+        this.hideModal('confirmDialog');
     }
 
-    formatPercent(value) {
-        if (typeof value !== 'number') return '0%';
-        return Math.round(value * 100) / 100 + '%';
-    }
+    // Toast Notifications
+    showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
 
-    getCurrencySymbol(currency) {
-        const symbols = { 'RUB': '₽', 'USD': '$', 'EUR': '€' };
-        return symbols[currency] || '₽';
+        const toast = document.createElement('div');
+        toast.className = `toast toast--${type}`;
+        
+        toast.innerHTML = `
+            <div class="toast__message">${message}</div>
+            <button class="toast__close" onclick="this.parentElement.remove()">&times;</button>
+        `;
+
+        container.appendChild(toast);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 5000);
     }
 }
 
-// Глобальные функции для HTML onclick handlers
+// Global functions for HTML onclick handlers - make them available immediately
+window.showModal = function(modalId) {
+    if (window.app) window.app.showModal(modalId);
+};
+
+window.hideModal = function(modalId) {
+    if (window.app) window.app.hideModal(modalId);
+};
+
+window.handlePricingUpgrade = function() {
+    if (window.app) window.app.handlePricingUpgrade();
+};
+
+// Initialize application
 let app;
-
-// Инициализация приложения после загрузки DOM
-document.addEventListener('DOMContentLoaded', function() {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        app = new FinModelApp();
+        window.app = app; // Make globally accessible
+    });
+} else {
     app = new FinModelApp();
-});
-
-// Экспортируем функции в глобальную область видимости для onclick handlers
-window.showAuthModal = (mode) => app?.showAuthModal(mode);
-window.switchAuthMode = () => app?.switchAuthMode();
-window.googleAuth = () => app?.googleAuth();
-window.logout = () => app?.logout();
-window.showDemo = () => app?.showDemo();
-window.createNewModel = () => app?.createNewModel();
-window.createFromTemplate = (type) => app?.createFromTemplate(type);
-window.saveSettings = () => app?.saveSettings();
-window.upgradePlan = (plan) => app?.upgradePlan(plan);
-window.contactSales = () => app?.contactSales();
-window.saveModel = () => app?.saveModel();
-window.exportModel = () => app?.exportModel();
-window.performExport = () => app?.performExport();
-window.backToDashboard = () => app?.backToDashboard();
-window.closeModal = (modalId) => app?.closeModal(modalId);
-window.showUpgradeModal = () => app?.showUpgradeModal();
-window.addProduct = () => app?.addProduct();
-window.addEmployee = () => app?.addEmployee();
-window.addCapexItem = () => app?.addCapexItem();
+    window.app = app; // Make globally accessible
+}

@@ -3,48 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinModel Pro - Профессиональная платформа финансового моделирования</title>
+    <title>FinModel Pro - Финансовое моделирование для стартапов</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Chart.js для графиков -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Навигация -->
-    <nav class="navbar">
-        <div class="navbar-container">
-            <div class="navbar-brand">
-                <h2>FinModel Pro</h2>
-            </div>
-            <div class="navbar-menu">
-                <div id="navbar-logged-out" class="navbar-auth hidden">
-                    <button class="btn btn--outline btn--sm" onclick="showAuthModal('login')">Войти</button>
-                    <button class="btn btn--primary btn--sm" onclick="showAuthModal('register')">Регистрация</button>
+    <!-- Header -->
+    <header id="header" class="header">
+        <div class="container">
+            <div class="header__content">
+                <div class="header__logo">
+                    <h1>FinModel Pro</h1>
                 </div>
-                <div id="navbar-logged-in" class="navbar-auth hidden">
-                    <span class="user-info">
-                        <span id="user-name"></span>
-                        <span class="plan-badge" id="user-plan">FREE</span>
-                    </span>
-                    <button class="btn btn--outline btn--sm" onclick="logout()">Выйти</button>
-                </div>
+                <nav class="header__nav" id="headerNav">
+                    <div class="header__auth" id="authButtons">
+                        <button class="btn btn--outline" id="loginBtn">Войти</button>
+                        <button class="btn btn--primary" id="registerBtn">Регистрация</button>
+                    </div>
+                    <div class="header__user hidden" id="userInfo">
+                        <div class="user-info">
+                            <span class="user-info__name" id="userName"></span>
+                            <span class="user-info__plan" id="userPlan"></span>
+                        </div>
+                        <button class="btn btn--outline" id="logoutBtn">Выйти</button>
+                    </div>
+                </nav>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <!-- Главная страница -->
-    <main id="landing-page" class="landing">
+    <!-- Landing Page -->
+    <main id="landingPage" class="landing">
         <section class="hero">
             <div class="container">
-                <div class="hero-content">
-                    <h1>Создавайте профессиональные финансовые модели за 30-60 минут</h1>
-                    <p class="hero-subtitle">Интуитивно понятная SaaS-платформа для интерактивного финансового моделирования без финансового образования</p>
-                    <div class="hero-cta">
-                        <button class="btn btn--primary btn--lg" onclick="showAuthModal('register')">
-                            Попробовать бесплатно
-                        </button>
-                        <button class="btn btn--outline btn--lg" onclick="showDemo()">
-                            Посмотреть демо
-                        </button>
+                <div class="hero__content">
+                    <h1 class="hero__title">Создавайте финансовые модели для стартапов за минуты</h1>
+                    <p class="hero__description">Профессиональные инструменты для планирования, анализа и презентации финансовых показателей вашего бизнеса</p>
+                    <div class="hero__actions">
+                        <button class="btn btn--primary btn--lg" id="heroRegisterBtn">Начать бесплатно</button>
+                        <button class="btn btn--outline btn--lg" id="heroLoginBtn">Войти</button>
                     </div>
                 </div>
             </div>
@@ -53,30 +50,22 @@
         <section class="features">
             <div class="container">
                 <h2>Возможности платформы</h2>
-                <div class="features-grid">
+                <div class="features__grid">
                     <div class="feature-card">
-                        <h3>Интуитивный интерфейс</h3>
-                        <p>Создавайте модели без специальных знаний в финансах</p>
+                        <h3>Быстрое моделирование</h3>
+                        <p>Создавайте финансовые модели за минуты с помощью готовых шаблонов</p>
                     </div>
                     <div class="feature-card">
                         <h3>Автоматические расчеты</h3>
-                        <p>NPV, IRR, EBITDA и другие показатели рассчитываются автоматически</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Профессиональные отчеты</h3>
-                        <p>Экспорт в Excel, PowerPoint и PDF для презентаций</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Сценарный анализ</h3>
-                        <p>Анализ чувствительности и стресс-тестирование</p>
+                        <p>P&L, Cash Flow, NPV, IRR и другие показатели рассчитываются автоматически</p>
                     </div>
                     <div class="feature-card">
                         <h3>Визуализация данных</h3>
-                        <p>Интерактивные графики и диаграммы для презентаций</p>
+                        <p>Интерактивные графики и дашборды для презентации результатов</p>
                     </div>
                     <div class="feature-card">
-                        <h3>Совместная работа</h3>
-                        <p>Делитесь моделями с коллегами и инвесторами</p>
+                        <h3>Экспорт отчетов</h3>
+                        <p>PDF, Excel и PowerPoint форматы для презентации инвесторам</p>
                     </div>
                 </div>
             </div>
@@ -85,558 +74,448 @@
         <section class="pricing">
             <div class="container">
                 <h2>Тарифные планы</h2>
-                <div class="pricing-grid">
-                    <div class="pricing-card">
-                        <div class="pricing-header">
-                            <h3>FREE</h3>
-                            <div class="price">0₽<span>/месяц</span></div>
-                        </div>
-                        <ul class="pricing-features">
-                            <li>До 3 финансовых моделей</li>
-                            <li>Все основные функции моделирования</li>
-                            <li>Экспорт только в PDF формат</li>
-                            <li>Стандартная техподдержка через FAQ</li>
-                            <li>Watermark "Created with FinModel Pro"</li>
-                        </ul>
-                        <button class="btn btn--outline btn--full-width" onclick="showAuthModal('register')">
-                            Начать бесплатно
-                        </button>
-                    </div>
-                    
-                    <div class="pricing-card pricing-card--popular">
-                        <div class="pricing-badge">Популярный</div>
-                        <div class="pricing-header">
-                            <h3>BASIC</h3>
-                            <div class="price">1990₽<span>/месяц</span></div>
-                        </div>
-                        <ul class="pricing-features">
-                            <li>Неограниченное количество моделей</li>
-                            <li>Полный экспорт в Excel с формулами</li>
-                            <li>Экспорт в PowerPoint для презентаций</li>
-                            <li>Приоритетная email поддержка</li>
-                            <li>Убрать watermark с отчетов</li>
-                            <li>Расширенная библиотека шаблонов</li>
-                        </ul>
-                        <button class="btn btn--primary btn--full-width" onclick="showAuthModal('register')">
-                            Выбрать план
-                        </button>
-                    </div>
-                    
-                    <div class="pricing-card">
-                        <div class="pricing-header">
-                            <h3>WHITE-LABEL</h3>
-                            <div class="price">от 9900₽<span>/месяц</span></div>
-                        </div>
-                        <ul class="pricing-features">
-                            <li>Все функции BASIC плана</li>
-                            <li>Полная кастомизация брендинга</li>
-                            <li>API для интеграции с внешними системами</li>
-                            <li>Персональный менеджер аккаунта</li>
-                            <li>Техническая поддержка консультантов</li>
-                            <li>Система управления клиентами</li>
-                        </ul>
-                        <button class="btn btn--outline btn--full-width" onclick="contactSales()">
-                            Связаться с продажами
-                        </button>
-                    </div>
+                <div class="pricing__grid" id="pricingPlans">
+                    <!-- Pricing cards will be populated by JavaScript -->
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Dashboard пользователя -->
-    <main id="dashboard-page" class="dashboard hidden">
-        <div class="dashboard-container">
-            <aside class="sidebar">
-                <div class="sidebar-header">
-                    <h2>FinModel Pro</h2>
+    <!-- App Interface -->
+    <div id="appInterface" class="app hidden">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar__header">
+                <h2>FinModel Pro</h2>
+                <button class="sidebar__toggle" id="sidebarToggle">
+                    <span></span>
+                </button>
+            </div>
+            <nav class="sidebar__nav">
+                <a href="#" class="sidebar__link active" data-view="dashboard">
+                    <span class="sidebar__icon">📊</span>
+                    Дашборд
+                </a>
+                <a href="#" class="sidebar__link" data-view="models">
+                    <span class="sidebar__icon">📋</span>
+                    Мои модели
+                </a>
+                <a href="#" class="sidebar__link" data-view="new-model">
+                    <span class="sidebar__icon">➕</span>
+                    Новая модель
+                </a>
+                <a href="#" class="sidebar__link" data-view="profile">
+                    <span class="sidebar__icon">👤</span>
+                    Профиль
+                </a>
+            </nav>
+            <div class="sidebar__footer">
+                <div class="plan-info">
+                    <div class="plan-info__name" id="sidebarPlan">FREE</div>
+                    <div class="plan-info__usage" id="sidebarUsage">0/3 моделей</div>
                 </div>
-                <nav class="sidebar-nav">
-                    <a href="#" class="nav-item active" data-page="models">
-                        <span>Мои модели</span>
-                    </a>
-                    <a href="#" class="nav-item" data-page="templates">
-                        <span>Шаблоны</span>
-                    </a>
-                    <a href="#" class="nav-item" data-page="settings">
-                        <span>Настройки</span>
-                    </a>
-                    <a href="#" class="nav-item" data-page="billing">
-                        <span>Подписка</span>
-                    </a>
-                </nav>
-                <div class="sidebar-footer">
-                    <div class="plan-info">
-                        <div class="plan-name" id="sidebar-plan">FREE план</div>
-                        <div class="plan-usage">
-                            <span id="models-used">0</span> из <span id="models-limit">3</span> моделей
-                        </div>
-                        <button class="btn btn--primary btn--sm btn--full-width" onclick="showUpgradeModal()">
-                            Улучшить план
-                        </button>
-                    </div>
-                </div>
-            </aside>
+            </div>
+        </aside>
 
-            <div class="main-content">
-                <!-- Мои модели -->
-                <div id="models-content" class="content-section">
-                    <div class="content-header">
-                        <h1>Мои модели</h1>
-                        <button class="btn btn--primary" onclick="createNewModel()">
-                            Создать модель
-                        </button>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="view active">
+                <header class="view__header">
+                    <h1>Дашборд</h1>
+                    <div class="view__actions">
+                        <button class="btn btn--primary" id="createModelBtn">Создать модель</button>
                     </div>
-                    <div id="models-grid" class="models-grid">
-                        <!-- Модели будут добавлены динамически -->
+                </header>
+                <div class="dashboard">
+                    <div class="dashboard__stats">
+                        <div class="stat-card">
+                            <h3>Всего моделей</h3>
+                            <div class="stat-card__value" id="totalModels">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Активных проектов</h3>
+                            <div class="stat-card__value" id="activeProjects">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Общая выручка</h3>
+                            <div class="stat-card__value" id="totalRevenue">0 ₽</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Среднее NPV</h3>
+                            <div class="stat-card__value" id="averageNPV">0 ₽</div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Шаблоны -->
-                <div id="templates-content" class="content-section hidden">
-                    <div class="content-header">
-                        <h1>Шаблоны моделей</h1>
-                    </div>
-                    <div class="templates-grid">
-                        <div class="template-card" onclick="createFromTemplate('ecommerce')">
-                            <h3>Интернет-магазин</h3>
-                            <p>Модель для e-commerce проекта с учетом CAC и LTV</p>
-                        </div>
-                        <div class="template-card" onclick="createFromTemplate('saas')">
-                            <h3>SaaS стартап</h3>
-                            <p>Подписочная модель с расчетом MRR и Churn</p>
-                        </div>
-                        <div class="template-card" onclick="createFromTemplate('restaurant')">
-                            <h3>Ресторанный бизнес</h3>
-                            <p>Модель с учетом сезонности и операционных расходов</p>
-                        </div>
-                        <div class="template-card" onclick="createFromTemplate('manufacturing')">
-                            <h3>Производственная компания</h3>
-                            <p>Модель с капитальными вложениями и амортизацией</p>
+                    <div class="dashboard__charts">
+                        <div class="chart-container" style="position: relative; height: 400px;">
+                            <canvas id="revenueChart"></canvas>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Настройки -->
-                <div id="settings-content" class="content-section hidden">
-                    <div class="content-header">
-                        <h1>Настройки профиля</h1>
+            <!-- Models List View -->
+            <div id="modelsView" class="view">
+                <header class="view__header">
+                    <h1>Мои модели</h1>
+                    <div class="view__actions">
+                        <button class="btn btn--primary" id="createModelBtn2">Создать модель</button>
                     </div>
-                    <div class="settings-form">
-                        <div class="form-group">
-                            <label class="form-label">Имя</label>
-                            <input type="text" class="form-control" id="profile-name" placeholder="Ваше имя">
+                </header>
+                <div class="models-grid" id="modelsGrid">
+                    <!-- Models will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- New Model View -->
+            <div id="newModelView" class="view">
+                <header class="view__header">
+                    <h1>Создание новой модели</h1>
+                    <div class="save-status" id="saveStatus">
+                        <span class="save-status__text">Все изменения сохранены</span>
+                    </div>
+                </header>
+                <div class="model-builder">
+                    <div class="model-builder__steps">
+                        <div class="step active" data-step="basic">
+                            <div class="step__number">1</div>
+                            <div class="step__title">Основное</div>
                         </div>
+                        <div class="step" data-step="products">
+                            <div class="step__number">2</div>
+                            <div class="step__title">Продукты</div>
+                        </div>
+                        <div class="step" data-step="expenses">
+                            <div class="step__number">3</div>
+                            <div class="step__title">Расходы</div>
+                        </div>
+                        <div class="step" data-step="personnel">
+                            <div class="step__number">4</div>
+                            <div class="step__title">Персонал</div>
+                        </div>
+                        <div class="step" data-step="investments">
+                            <div class="step__number">5</div>
+                            <div class="step__title">Инвестиции</div>
+                        </div>
+                        <div class="step" data-step="results">
+                            <div class="step__number">6</div>
+                            <div class="step__title">Результаты</div>
+                        </div>
+                    </div>
+
+                    <div class="model-builder__content">
+                        <!-- Basic Info Step -->
+                        <div class="step-content active" id="basicStep">
+                            <h2>Основная информация</h2>
+                            <div class="form-group">
+                                <label class="form-label">Название модели</label>
+                                <input type="text" class="form-control" id="modelName" placeholder="Введите название модели">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Описание</label>
+                                <textarea class="form-control" id="modelDescription" rows="3" placeholder="Опишите ваш проект"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Отрасль</label>
+                                <select class="form-control" id="modelIndustry">
+                                    <option value="">Выберите отрасль</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Валюта</label>
+                                <select class="form-control" id="modelCurrency">
+                                    <option value="RUB">₽ Российский рубль</option>
+                                    <option value="USD">$ Доллар США</option>
+                                    <option value="EUR">€ Евро</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Период планирования</label>
+                                <select class="form-control" id="planningPeriod">
+                                    <option value="monthly">Помесячно (36 месяцев)</option>
+                                    <option value="quarterly">Поквартально (12 кварталов)</option>
+                                    <option value="yearly">Погодично (5 лет)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Products Step -->
+                        <div class="step-content hidden" id="productsStep">
+                            <h2>Продукты и услуги</h2>
+                            <div class="products-list" id="productsList">
+                                <!-- Products will be populated by JavaScript -->
+                            </div>
+                            <button class="btn btn--outline" id="addProductBtn">+ Добавить продукт</button>
+                        </div>
+
+                        <!-- Expenses Step -->
+                        <div class="step-content hidden" id="expensesStep">
+                            <h2>Расходы</h2>
+                            <div class="expenses-mode">
+                                <label class="toggle">
+                                    <input type="checkbox" id="advancedExpenses">
+                                    <span class="toggle__slider"></span>
+                                    Расширенный режим
+                                </label>
+                            </div>
+                            <div class="expenses-list" id="expensesList">
+                                <!-- Expenses will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Personnel Step -->
+                        <div class="step-content hidden" id="personnelStep">
+                            <h2>Персонал</h2>
+                            <div class="personnel-list" id="personnelList">
+                                <!-- Personnel will be populated by JavaScript -->
+                            </div>
+                            <button class="btn btn--outline" id="addPersonnelBtn">+ Добавить должность</button>
+                        </div>
+
+                        <!-- Investments Step -->
+                        <div class="step-content hidden" id="investmentsStep">
+                            <h2>Инвестиции и финансирование</h2>
+                            <div class="investments-tabs">
+                                <button class="tab-btn active" data-tab="equipment">Оборудование</button>
+                                <button class="tab-btn" data-tab="funding">Финансирование</button>
+                            </div>
+                            <div class="tab-content" id="equipmentTab">
+                                <div class="equipment-list" id="equipmentList">
+                                    <!-- Equipment will be populated by JavaScript -->
+                                </div>
+                                <button class="btn btn--outline" id="addEquipmentBtn">+ Добавить оборудование</button>
+                            </div>
+                            <div class="tab-content hidden" id="fundingTab">
+                                <div class="funding-list" id="fundingList">
+                                    <!-- Funding will be populated by JavaScript -->
+                                </div>
+                                <button class="btn btn--outline" id="addFundingBtn">+ Добавить финансирование</button>
+                            </div>
+                        </div>
+
+                        <!-- Results Step -->
+                        <div class="step-content hidden" id="resultsStep">
+                            <h2>Финансовые результаты</h2>
+                            <div class="results-tabs">
+                                <button class="tab-btn active" data-tab="pnl">P&L</button>
+                                <button class="tab-btn" data-tab="cashflow">Cash Flow</button>
+                                <button class="tab-btn" data-tab="metrics">Показатели</button>
+                                <button class="tab-btn" data-tab="charts">Графики</button>
+                            </div>
+                            <div class="tab-content" id="pnlTab">
+                                <div class="results-table" id="pnlTable">
+                                    <!-- P&L table will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            <div class="tab-content hidden" id="cashflowTab">
+                                <div class="results-table" id="cashflowTable">
+                                    <!-- Cash flow table will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            <div class="tab-content hidden" id="metricsTab">
+                                <div class="metrics-grid" id="metricsGrid">
+                                    <!-- Metrics will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            <div class="tab-content hidden" id="chartsTab">
+                                <div class="chart-container" style="position: relative; height: 400px;">
+                                    <canvas id="resultsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="model-builder__actions">
+                        <button class="btn btn--outline" id="prevStepBtn" disabled>Назад</button>
+                        <button class="btn btn--primary" id="nextStepBtn">Далее</button>
+                        <button class="btn btn--primary hidden" id="saveModelBtn">Сохранить модель</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile View -->
+            <div id="profileView" class="view">
+                <header class="view__header">
+                    <h1>Профиль пользователя</h1>
+                </header>
+                <div class="profile">
+                    <div class="profile__info">
+                        <h2>Личная информация</h2>
                         <div class="form-group">
                             <label class="form-label">Email</label>
-                            <input type="email" class="form-control" id="profile-email" readonly>
+                            <input type="email" class="form-control" id="profileEmail" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Имя</label>
+                            <input type="text" class="form-control" id="profileName">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Компания</label>
-                            <input type="text" class="form-control" id="profile-company" placeholder="Название компании">
+                            <input type="text" class="form-control" id="profileCompany">
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Тема интерфейса</label>
-                            <select class="form-control" id="theme-select">
-                                <option value="auto">Автоматически</option>
-                                <option value="light">Светлая</option>
-                                <option value="dark">Тёмная</option>
-                            </select>
-                        </div>
-                        <button class="btn btn--primary" onclick="saveSettings()">Сохранить изменения</button>
+                        <button class="btn btn--primary" id="updateProfileBtn">Сохранить изменения</button>
+                        <button class="btn btn--outline" id="changePasswordBtn">Изменить пароль</button>
                     </div>
-                </div>
-
-                <!-- Подписка -->
-                <div id="billing-content" class="content-section hidden">
-                    <div class="content-header">
-                        <h1>Управление подпиской</h1>
-                    </div>
-                    <div class="billing-info">
-                        <div class="current-plan">
-                            <h3>Текущий план: <span id="current-plan-name">FREE</span></h3>
-                            <p>Использовано <span id="current-models-used">0</span> из <span id="current-models-limit">3</span> моделей</p>
-                        </div>
-                        <div class="upgrade-options">
-                            <h4>Доступные планы</h4>
-                            <div class="upgrade-cards">
-                                <div class="upgrade-card">
-                                    <h3>BASIC</h3>
-                                    <div class="price">1990₽/месяц</div>
-                                    <button class="btn btn--primary" onclick="upgradePlan('basic')">Выбрать</button>
-                                </div>
-                                <div class="upgrade-card">
-                                    <h3>WHITE-LABEL</h3>
-                                    <div class="price">от 9900₽/месяц</div>
-                                    <button class="btn btn--primary" onclick="contactSales()">Связаться</button>
-                                </div>
+                    <div class="profile__subscription">
+                        <h2>Подписка</h2>
+                        <div class="subscription-info">
+                            <div class="subscription-info__plan" id="subscriptionPlan">FREE</div>
+                            <div class="subscription-info__details" id="subscriptionDetails">
+                                До 3 моделей, PDF экспорт
+                            </div>
+                            <div class="subscription-info__usage" id="subscriptionUsage">
+                                Использовано: 0 из 3 моделей
                             </div>
                         </div>
+                        <button class="btn btn--primary">Изменить план</button>
                     </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
-    <!-- Редактор модели -->
-    <main id="model-editor" class="model-editor hidden">
-        <div class="editor-container">
-            <div class="editor-header">
-                <div class="model-title">
-                    <input type="text" id="model-name" class="model-name-input" placeholder="Название модели">
-                </div>
-                <div class="editor-actions">
-                    <button class="btn btn--outline" onclick="saveModel()">Сохранить</button>
-                    <button class="btn btn--outline" onclick="exportModel()">Экспорт</button>
-                    <button class="btn btn--outline" onclick="backToDashboard()">← Назад</button>
-                </div>
+    <!-- Modals -->
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal hidden">
+        <div class="modal__backdrop"></div>
+        <div class="modal__content">
+            <div class="modal__header">
+                <h2>Вход в FinModel Pro</h2>
+                <button class="modal__close" id="loginModalClose">&times;</button>
             </div>
-
-            <div class="editor-tabs">
-                <button class="editor-tab active" data-tab="setup">Настройка</button>
-                <button class="editor-tab" data-tab="products">Продукты</button>
-                <button class="editor-tab" data-tab="expenses">Расходы</button>
-                <button class="editor-tab" data-tab="dashboard">Дашборд</button>
-                <button class="editor-tab" data-tab="reports">Отчеты</button>
-            </div>
-
-            <div class="editor-content">
-                <!-- Настройка модели -->
-                <div id="setup-tab" class="tab-content">
-                    <div class="setup-grid">
-                        <div class="setup-section">
-                            <h3>Основные параметры</h3>
-                            <div class="form-group">
-                                <label class="form-label">Горизонт планирования</label>
-                                <select class="form-control" id="planning-horizon">
-                                    <option value="12">1 год</option>
-                                    <option value="24">2 года</option>
-                                    <option value="36" selected>3 года</option>
-                                    <option value="48">4 года</option>
-                                    <option value="60">5 лет</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Базовая валюта</label>
-                                <select class="form-control" id="base-currency">
-                                    <option value="RUB" selected>Рубли (₽)</option>
-                                    <option value="USD">Доллары ($)</option>
-                                    <option value="EUR">Евро (€)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Ставка дисконтирования (%)</label>
-                                <input type="number" class="form-control" id="discount-rate" value="12" min="0" max="100" step="0.1">
-                            </div>
-                        </div>
-                        <div class="setup-section">
-                            <h3>Начальные инвестиции</h3>
-                            <div class="form-group">
-                                <label class="form-label">Первоначальные вложения</label>
-                                <input type="number" class="form-control" id="initial-investment" value="0" min="0" step="1000">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Оборотный капитал</label>
-                                <input type="number" class="form-control" id="working-capital" value="0" min="0" step="1000">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Продукты и услуги -->
-                <div id="products-tab" class="tab-content hidden">
-                    <div class="products-header">
-                        <h3>Продукты и услуги</h3>
-                        <button class="btn btn--primary" onclick="addProduct()">Добавить продукт</button>
-                    </div>
-                    <div id="products-list" class="products-list">
-                        <!-- Продукты будут добавлены динамически -->
-                    </div>
-                </div>
-
-                <!-- Расходы -->
-                <div id="expenses-tab" class="tab-content hidden">
-                    <div class="expenses-tabs">
-                        <button class="expense-tab active" data-expense-tab="operational">Операционные</button>
-                        <button class="expense-tab" data-expense-tab="personnel">Персонал</button>
-                        <button class="expense-tab" data-expense-tab="marketing">Маркетинг</button>
-                        <button class="expense-tab" data-expense-tab="capex">Инвестиции</button>
-                    </div>
-                    
-                    <div class="expense-content">
-                        <div id="operational-expenses" class="expense-section">
-                            <h3>Операционные расходы</h3>
-                            <div class="expense-grid">
-                                <div class="expense-item">
-                                    <label>Аренда помещений</label>
-                                    <input type="number" class="form-control" id="rent-expense" value="0" min="0" step="1000">
-                                </div>
-                                <div class="expense-item">
-                                    <label>Коммунальные услуги</label>
-                                    <input type="number" class="form-control" id="utilities-expense" value="0" min="0" step="1000">
-                                </div>
-                                <div class="expense-item">
-                                    <label>Административные расходы</label>
-                                    <input type="number" class="form-control" id="admin-expense" value="0" min="0" step="1000">
-                                </div>
-                                <div class="expense-item">
-                                    <label>Прочие расходы</label>
-                                    <input type="number" class="form-control" id="other-expense" value="0" min="0" step="1000">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="personnel-expenses" class="expense-section hidden">
-                            <div class="personnel-header">
-                                <h3>Расходы на персонал</h3>
-                                <button class="btn btn--primary" onclick="addEmployee()">Добавить должность</button>
-                            </div>
-                            <div id="personnel-list" class="personnel-list">
-                                <!-- Сотрудники будут добавлены динамически -->
-                            </div>
-                        </div>
-                        
-                        <div id="marketing-expenses" class="expense-section hidden">
-                            <h3>Маркетинговые расходы</h3>
-                            <div class="expense-grid">
-                                <div class="expense-item">
-                                    <label>Реклама в интернете</label>
-                                    <input type="number" class="form-control" id="online-advertising" value="0" min="0" step="1000">
-                                </div>
-                                <div class="expense-item">
-                                    <label>Традиционная реклама</label>
-                                    <input type="number" class="form-control" id="offline-advertising" value="0" min="0" step="1000">
-                                </div>
-                                <div class="expense-item">
-                                    <label>PR и маркетинговые события</label>
-                                    <input type="number" class="form-control" id="pr-events" value="0" min="0" step="1000">
-                                </div>
-                                <div class="expense-item">
-                                    <label>Контент-маркетинг</label>
-                                    <input type="number" class="form-control" id="content-marketing" value="0" min="0" step="1000">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="capex-expenses" class="expense-section hidden">
-                            <h3>Капитальные расходы</h3>
-                            <div class="capex-header">
-                                <button class="btn btn--primary" onclick="addCapexItem()">Добавить инвестицию</button>
-                            </div>
-                            <div id="capex-list" class="capex-list">
-                                <!-- Капитальные расходы будут добавлены динамически -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Дашборд -->
-                <div id="dashboard-tab" class="tab-content hidden">
-                    <div class="dashboard-grid">
-                        <div class="metric-card">
-                            <h4>Выручка (12 мес.)</h4>
-                            <div class="metric-value" id="revenue-12m">0 ₽</div>
-                        </div>
-                        <div class="metric-card">
-                            <h4>EBITDA</h4>
-                            <div class="metric-value" id="ebitda-value">0 ₽</div>
-                        </div>
-                        <div class="metric-card">
-                            <h4>NPV</h4>
-                            <div class="metric-value" id="npv-value">0 ₽</div>
-                        </div>
-                        <div class="metric-card">
-                            <h4>IRR</h4>
-                            <div class="metric-value" id="irr-value">0%</div>
-                        </div>
-                        <div class="metric-card">
-                            <h4>Срок окупаемости</h4>
-                            <div class="metric-value" id="payback-value">- мес.</div>
-                        </div>
-                        <div class="metric-card">
-                            <h4>Точка безубыточности</h4>
-                            <div class="metric-value" id="breakeven-value">- мес.</div>
-                        </div>
-                    </div>
-                    
-                    <div class="charts-grid">
-                        <div class="chart-container" style="position: relative; height: 400px;">
-                            <h4>Выручка и расходы по месяцам</h4>
-                            <canvas id="revenue-chart"></canvas>
-                        </div>
-                        <div class="chart-container" style="position: relative; height: 400px;">
-                            <h4>Накопленный денежный поток</h4>
-                            <canvas id="cashflow-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Отчеты -->
-                <div id="reports-tab" class="tab-content hidden">
-                    <div class="reports-header">
-                        <h3>Финансовые отчеты</h3>
-                        <div class="scenario-selector">
-                            <label>Сценарий:</label>
-                            <select class="form-control" id="scenario-select">
-                                <option value="base">Базовый</option>
-                                <option value="optimistic">Оптимистичный</option>
-                                <option value="pessimistic">Пессимистичный</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="reports-grid">
-                        <div class="report-section">
-                            <h4>Отчет о прибылях и убытках</h4>
-                            <div class="table-container">
-                                <table id="pnl-table" class="financial-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Показатель</th>
-                                            <th>Год 1</th>
-                                            <th>Год 2</th>
-                                            <th>Год 3</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Данные будут заполнены автоматически -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div class="report-section">
-                            <h4>Движение денежных средств</h4>
-                            <div class="table-container">
-                                <table id="cashflow-table" class="financial-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Показатель</th>
-                                            <th>Год 1</th>
-                                            <th>Год 2</th>
-                                            <th>Год 3</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Данные будут заполнены автоматически -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Модальные окна -->
-    <!-- Аутентификация -->
-    <div id="auth-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="auth-modal-title">Вход в систему</h3>
-                <button class="modal-close" onclick="closeModal('auth-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="auth-form">
+            <div class="modal__body">
+                <form id="loginForm">
                     <div class="form-group">
                         <label class="form-label">Email</label>
-                        <input type="email" class="form-control" id="auth-email" required>
+                        <input type="email" class="form-control" name="email" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Пароль</label>
-                        <input type="password" class="form-control" id="auth-password" required>
+                        <input type="password" class="form-control" name="password" required>
                     </div>
-                    <div id="register-fields" class="hidden">
-                        <div class="form-group">
-                            <label class="form-label">Подтвердите пароль</label>
-                            <input type="password" class="form-control" id="auth-password-confirm">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Имя</label>
-                            <input type="text" class="form-control" id="auth-name">
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn--primary btn--full-width" id="auth-submit">Войти</button>
+                    <button type="submit" class="btn btn--primary btn--full-width">Войти</button>
                 </form>
-                <div class="auth-divider">
-                    <span>или</span>
-                </div>
-                <button class="btn btn--outline btn--full-width google-auth" onclick="googleAuth()">
+                <div class="divider">или</div>
+                <button class="btn btn--outline btn--full-width" id="googleLoginBtn">
                     Войти через Google
                 </button>
-                <div class="auth-footer">
-                    <p id="auth-switch-text">
-                        Нет аккаунта? <a href="#" onclick="switchAuthMode()">Зарегистрироваться</a>
-                    </p>
+                <div class="modal__footer">
+                    <a href="#" id="showForgotPassword">Забыли пароль?</a>
+                    <a href="#" id="showRegisterFromLogin">Нет аккаунта? Регистрация</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Обновление плана -->
-    <div id="upgrade-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Обновить тарифный план</h3>
-                <button class="modal-close" onclick="closeModal('upgrade-modal')">&times;</button>
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal hidden">
+        <div class="modal__backdrop"></div>
+        <div class="modal__content">
+            <div class="modal__header">
+                <h2>Регистрация в FinModel Pro</h2>
+                <button class="modal__close" id="registerModalClose">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="upgrade-info">
-                    <p>Вы достигли лимита бесплатного плана. Обновите план для продолжения работы.</p>
-                    <div class="upgrade-options">
-                        <div class="upgrade-option">
-                            <h4>BASIC - 1990₽/месяц</h4>
-                            <ul>
-                                <li>Неограниченное количество моделей</li>
-                                <li>Экспорт в Excel и PowerPoint</li>
-                                <li>Приоритетная поддержка</li>
-                            </ul>
-                            <button class="btn btn--primary" onclick="upgradePlan('basic')">Выбрать BASIC</button>
-                        </div>
+            <div class="modal__body">
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" required>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Экспорт -->
-    <div id="export-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Экспорт модели</h3>
-                <button class="modal-close" onclick="closeModal('export-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="export-options">
-                    <div class="export-option">
-                        <input type="radio" id="export-pdf" name="export-format" value="pdf" checked>
-                        <label for="export-pdf">
-                            <strong>PDF отчет</strong>
-                            <span>Презентабельный отчет с графиками</span>
-                        </label>
+                    <div class="form-group">
+                        <label class="form-label">Имя</label>
+                        <input type="text" class="form-control" name="name" required>
                     </div>
-                    <div class="export-option" id="excel-option">
-                        <input type="radio" id="export-excel" name="export-format" value="excel">
-                        <label for="export-excel">
-                            <strong>Excel модель</strong>
-                            <span>Интерактивная модель с формулами (только BASIC+)</span>
-                        </label>
+                    <div class="form-group">
+                        <label class="form-label">Пароль</label>
+                        <input type="password" class="form-control" name="password" required minlength="8">
                     </div>
-                    <div class="export-option" id="powerpoint-option">
-                        <input type="radio" id="export-powerpoint" name="export-format" value="powerpoint">
-                        <label for="export-powerpoint">
-                            <strong>PowerPoint презентация</strong>
-                            <span>Готовая презентация для инвесторов (только BASIC+)</span>
-                        </label>
+                    <div class="form-group">
+                        <label class="form-label">Подтвердите пароль</label>
+                        <input type="password" class="form-control" name="confirmPassword" required minlength="8">
                     </div>
-                </div>
-                <button class="btn btn--primary btn--full-width" onclick="performExport()">
-                    Экспортировать
+                    <button type="submit" class="btn btn--primary btn--full-width">Зарегистрироваться</button>
+                </form>
+                <div class="divider">или</div>
+                <button class="btn btn--outline btn--full-width" id="googleRegisterBtn">
+                    Регистрация через Google
                 </button>
+                <div class="modal__footer">
+                    <a href="#" id="showLoginFromRegister">Есть аккаунт? Войти</a>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="modal hidden">
+        <div class="modal__backdrop"></div>
+        <div class="modal__content">
+            <div class="modal__header">
+                <h2>Восстановление пароля</h2>
+                <button class="modal__close" id="forgotPasswordModalClose">&times;</button>
+            </div>
+            <div class="modal__body">
+                <form id="forgotPasswordForm">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Отправить инструкции</button>
+                </form>
+                <div class="modal__footer">
+                    <a href="#" id="backToLogin">Вернуться к входу</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal hidden">
+        <div class="modal__backdrop"></div>
+        <div class="modal__content">
+            <div class="modal__header">
+                <h2>Изменение пароля</h2>
+                <button class="modal__close" id="changePasswordModalClose">&times;</button>
+            </div>
+            <div class="modal__body">
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label class="form-label">Текущий пароль</label>
+                        <input type="password" class="form-control" name="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Новый пароль</label>
+                        <input type="password" class="form-control" name="newPassword" required minlength="8">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Подтвердите новый пароль</label>
+                        <input type="password" class="form-control" name="confirmNewPassword" required minlength="8">
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Изменить пароль</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div id="confirmDialog" class="modal hidden">
+        <div class="modal__backdrop"></div>
+        <div class="modal__content modal__content--small">
+            <div class="modal__header">
+                <h2 id="confirmTitle">Подтверждение</h2>
+            </div>
+            <div class="modal__body">
+                <p id="confirmMessage">Вы уверены?</p>
+            </div>
+            <div class="modal__footer">
+                <button class="btn btn--outline" id="confirmCancel">Отмена</button>
+                <button class="btn btn--primary" id="confirmButton">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
 
     <script src="app.js"></script>
 </body>

@@ -1,0 +1,26 @@
+# Настройки сборки
+[build]
+# Команда сборки 
+ command = ""
+# Директория для публикации (корень проекта)
+ publish = "."
+  
+# Настройки для разных контекстов развертывания
+[context.production.environment]
+NODE_ENV = "production"
+[context.deploy-preview.environment]
+NODE_ENV = "development"
+
+# Правила перенаправления для SPA
+ [[redirects]]
+ from = "/*"
+ to = "/index.html"
+ status = 200
+  
+# Заголовки безопасности
+[[headers]]
+for = "/*"
+[headers.values]
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+X-Content-Type-Options = "nosniff"

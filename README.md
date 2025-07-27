@@ -205,9 +205,9 @@ npm run dev
 
 ## 👥 Контакты
 
-- **Email:** support@finmodel.pro
-- **Website:** https://finmodel.pro
-- **GitHub:** https://github.com/your-username/finmodel-pro
+- **Email:** 
+- **Website:** 
+- **GitHub:** 
 
 ## 🙏 Благодарности
 

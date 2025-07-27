@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinModel Pro - Профессиональная платформа финансового моделирования</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js для графиков -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h2>FinModel Pro</h2>
+            </div>
+            <div class="navbar-menu">
+                <div id="navbar-logged-out" class="navbar-auth hidden">
+                    <button class="btn btn--outline btn--sm" onclick="showAuthModal('login')">Войти</button>
+                    <button class="btn btn--primary btn--sm" onclick="showAuthModal('register')">Регистрация</button>
+                </div>
+                <div id="navbar-logged-in" class="navbar-auth hidden">
+                    <span class="user-info">
+                        <span id="user-name"></span>
+                        <span class="plan-badge" id="user-plan">FREE</span>
+                    </span>
+                    <button class="btn btn--outline btn--sm" onclick="logout()">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Главная страница -->
+    <main id="landing-page" class="landing">
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <h1>Создавайте профессиональные финансовые модели за 30-60 минут</h1>
+                    <p class="hero-subtitle">Интуитивно понятная SaaS-платформа для интерактивного финансового моделирования без финансового образования</p>
+                    <div class="hero-cta">
+                        <button class="btn btn--primary btn--lg" onclick="showAuthModal('register')">
+                            Попробовать бесплатно
+                        </button>
+                        <button class="btn btn--outline btn--lg" onclick="showDemo()">
+                            Посмотреть демо
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="container">
+                <h2>Возможности платформы</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h3>Интуитивный интерфейс</h3>
+                        <p>Создавайте модели без специальных знаний в финансах</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Автоматические расчеты</h3>
+                        <p>NPV, IRR, EBITDA и другие показатели рассчитываются автоматически</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Профессиональные отчеты</h3>
+                        <p>Экспорт в Excel, PowerPoint и PDF для презентаций</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Сценарный анализ</h3>
+                        <p>Анализ чувствительности и стресс-тестирование</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Визуализация данных</h3>
+                        <p>Интерактивные графики и диаграммы для презентаций</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Совместная работа</h3>
+                        <p>Делитесь моделями с коллегами и инвесторами</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pricing">
+            <div class="container">
+                <h2>Тарифные планы</h2>
+                <div class="pricing-grid">
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3>FREE</h3>
+                            <div class="price">0₽<span>/месяц</span></div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li>До 3 финансовых моделей</li>
+                            <li>Все основные функции моделирования</li>
+                            <li>Экспорт только в PDF формат</li>
+                            <li>Стандартная техподдержка через FAQ</li>
+                            <li>Watermark "Created with FinModel Pro"</li>
+                        </ul>
+                        <button class="btn btn--outline btn--full-width" onclick="showAuthModal('register')">
+                            Начать бесплатно
+                        </button>
+                    </div>
+                    
+                    <div class="pricing-card pricing-card--popular">
+                        <div class="pricing-badge">Популярный</div>
+                        <div class="pricing-header">
+                            <h3>BASIC</h3>
+                            <div class="price">1990₽<span>/месяц</span></div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li>Неограниченное количество моделей</li>
+                            <li>Полный экспорт в Excel с формулами</li>
+                            <li>Экспорт в PowerPoint для презентаций</li>
+                            <li>Приоритетная email поддержка</li>
+                            <li>Убрать watermark с отчетов</li>
+                            <li>Расширенная библиотека шаблонов</li>
+                        </ul>
+                        <button class="btn btn--primary btn--full-width" onclick="showAuthModal('register')">
+                            Выбрать план
+                        </button>
+                    </div>
+                    
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3>WHITE-LABEL</h3>
+                            <div class="price">от 9900₽<span>/месяц</span></div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li>Все функции BASIC плана</li>
+                            <li>Полная кастомизация брендинга</li>
+                            <li>API для интеграции с внешними системами</li>
+                            <li>Персональный менеджер аккаунта</li>
+                            <li>Техническая поддержка консультантов</li>
+                            <li>Система управления клиентами</li>
+                        </ul>
+                        <button class="btn btn--outline btn--full-width" onclick="contactSales()">
+                            Связаться с продажами
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Dashboard пользователя -->
+    <main id="dashboard-page" class="dashboard hidden">
+        <div class="dashboard-container">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>FinModel Pro</h2>
+                </div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active" data-page="models">
+                        <span>Мои модели</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="templates">
+                        <span>Шаблоны</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="settings">
+                        <span>Настройки</span>
+                    </a>
+                    <a href="#" class="nav-item" data-page="billing">
+                        <span>Подписка</span>
+                    </a>
+                </nav>
+                <div class="sidebar-footer">
+                    <div class="plan-info">
+                        <div class="plan-name" id="sidebar-plan">FREE план</div>
+                        <div class="plan-usage">
+                            <span id="models-used">0</span> из <span id="models-limit">3</span> моделей
+                        </div>
+                        <button class="btn btn--primary btn--sm btn--full-width" onclick="showUpgradeModal()">
+                            Улучшить план
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="main-content">
+                <!-- Мои модели -->
+                <div id="models-content" class="content-section">
+                    <div class="content-header">
+                        <h1>Мои модели</h1>
+                        <button class="btn btn--primary" onclick="createNewModel()">
+                            Создать модель
+                        </button>
+                    </div>
+                    <div id="models-grid" class="models-grid">
+                        <!-- Модели будут добавлены динамически -->
+                    </div>
+                </div>
+
+                <!-- Шаблоны -->
+                <div id="templates-content" class="content-section hidden">
+                    <div class="content-header">
+                        <h1>Шаблоны моделей</h1>
+                    </div>
+                    <div class="templates-grid">
+                        <div class="template-card" onclick="createFromTemplate('ecommerce')">
+                            <h3>Интернет-магазин</h3>
+                            <p>Модель для e-commerce проекта с учетом CAC и LTV</p>
+                        </div>
+                        <div class="template-card" onclick="createFromTemplate('saas')">
+                            <h3>SaaS стартап</h3>
+                            <p>Подписочная модель с расчетом MRR и Churn</p>
+                        </div>
+                        <div class="template-card" onclick="createFromTemplate('restaurant')">
+                            <h3>Ресторанный бизнес</h3>
+                            <p>Модель с учетом сезонности и операционных расходов</p>
+                        </div>
+                        <div class="template-card" onclick="createFromTemplate('manufacturing')">
+                            <h3>Производственная компания</h3>
+                            <p>Модель с капитальными вложениями и амортизацией</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Настройки -->
+                <div id="settings-content" class="content-section hidden">
+                    <div class="content-header">
+                        <h1>Настройки профиля</h1>
+                    </div>
+                    <div class="settings-form">
+                        <div class="form-group">
+                            <label class="form-label">Имя</label>
+                            <input type="text" class="form-control" id="profile-name" placeholder="Ваше имя">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="profile-email" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Компания</label>
+                            <input type="text" class="form-control" id="profile-company" placeholder="Название компании">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Тема интерфейса</label>
+                            <select class="form-control" id="theme-select">
+                                <option value="auto">Автоматически</option>
+                                <option value="light">Светлая</option>
+                                <option value="dark">Тёмная</option>
+                            </select>
+                        </div>
+                        <button class="btn btn--primary" onclick="saveSettings()">Сохранить изменения</button>
+                    </div>
+                </div>
+
+                <!-- Подписка -->
+                <div id="billing-content" class="content-section hidden">
+                    <div class="content-header">
+                        <h1>Управление подпиской</h1>
+                    </div>
+                    <div class="billing-info">
+                        <div class="current-plan">
+                            <h3>Текущий план: <span id="current-plan-name">FREE</span></h3>
+                            <p>Использовано <span id="current-models-used">0</span> из <span id="current-models-limit">3</span> моделей</p>
+                        </div>
+                        <div class="upgrade-options">
+                            <h4>Доступные планы</h4>
+                            <div class="upgrade-cards">
+                                <div class="upgrade-card">
+                                    <h3>BASIC</h3>
+                                    <div class="price">1990₽/месяц</div>
+                                    <button class="btn btn--primary" onclick="upgradePlan('basic')">Выбрать</button>
+                                </div>
+                                <div class="upgrade-card">
+                                    <h3>WHITE-LABEL</h3>
+                                    <div class="price">от 9900₽/месяц</div>
+                                    <button class="btn btn--primary" onclick="contactSales()">Связаться</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Редактор модели -->
+    <main id="model-editor" class="model-editor hidden">
+        <div class="editor-container">
+            <div class="editor-header">
+                <div class="model-title">
+                    <input type="text" id="model-name" class="model-name-input" placeholder="Название модели">
+                </div>
+                <div class="editor-actions">
+                    <button class="btn btn--outline" onclick="saveModel()">Сохранить</button>
+                    <button class="btn btn--outline" onclick="exportModel()">Экспорт</button>
+                    <button class="btn btn--outline" onclick="backToDashboard()">← Назад</button>
+                </div>
+            </div>
+
+            <div class="editor-tabs">
+                <button class="editor-tab active" data-tab="setup">Настройка</button>
+                <button class="editor-tab" data-tab="products">Продукты</button>
+                <button class="editor-tab" data-tab="expenses">Расходы</button>
+                <button class="editor-tab" data-tab="dashboard">Дашборд</button>
+                <button class="editor-tab" data-tab="reports">Отчеты</button>
+            </div>
+
+            <div class="editor-content">
+                <!-- Настройка модели -->
+                <div id="setup-tab" class="tab-content">
+                    <div class="setup-grid">
+                        <div class="setup-section">
+                            <h3>Основные параметры</h3>
+                            <div class="form-group">
+                                <label class="form-label">Горизонт планирования</label>
+                                <select class="form-control" id="planning-horizon">
+                                    <option value="12">1 год</option>
+                                    <option value="24">2 года</option>
+                                    <option value="36" selected>3 года</option>
+                                    <option value="48">4 года</option>
+                                    <option value="60">5 лет</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Базовая валюта</label>
+                                <select class="form-control" id="base-currency">
+                                    <option value="RUB" selected>Рубли (₽)</option>
+                                    <option value="USD">Доллары ($)</option>
+                                    <option value="EUR">Евро (€)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ставка дисконтирования (%)</label>
+                                <input type="number" class="form-control" id="discount-rate" value="12" min="0" max="100" step="0.1">
+                            </div>
+                        </div>
+                        <div class="setup-section">
+                            <h3>Начальные инвестиции</h3>
+                            <div class="form-group">
+                                <label class="form-label">Первоначальные вложения</label>
+                                <input type="number" class="form-control" id="initial-investment" value="0" min="0" step="1000">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Оборотный капитал</label>
+                                <input type="number" class="form-control" id="working-capital" value="0" min="0" step="1000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Продукты и услуги -->
+                <div id="products-tab" class="tab-content hidden">
+                    <div class="products-header">
+                        <h3>Продукты и услуги</h3>
+                        <button class="btn btn--primary" onclick="addProduct()">Добавить продукт</button>
+                    </div>
+                    <div id="products-list" class="products-list">
+                        <!-- Продукты будут добавлены динамически -->
+                    </div>
+                </div>
+
+                <!-- Расходы -->
+                <div id="expenses-tab" class="tab-content hidden">
+                    <div class="expenses-tabs">
+                        <button class="expense-tab active" data-expense-tab="operational">Операционные</button>
+                        <button class="expense-tab" data-expense-tab="personnel">Персонал</button>
+                        <button class="expense-tab" data-expense-tab="marketing">Маркетинг</button>
+                        <button class="expense-tab" data-expense-tab="capex">Инвестиции</button>
+                    </div>
+                    
+                    <div class="expense-content">
+                        <div id="operational-expenses" class="expense-section">
+                            <h3>Операционные расходы</h3>
+                            <div class="expense-grid">
+                                <div class="expense-item">
+                                    <label>Аренда помещений</label>
+                                    <input type="number" class="form-control" id="rent-expense" value="0" min="0" step="1000">
+                                </div>
+                                <div class="expense-item">
+                                    <label>Коммунальные услуги</label>
+                                    <input type="number" class="form-control" id="utilities-expense" value="0" min="0" step="1000">
+                                </div>
+                                <div class="expense-item">
+                                    <label>Административные расходы</label>
+                                    <input type="number" class="form-control" id="admin-expense" value="0" min="0" step="1000">
+                                </div>
+                                <div class="expense-item">
+                                    <label>Прочие расходы</label>
+                                    <input type="number" class="form-control" id="other-expense" value="0" min="0" step="1000">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="personnel-expenses" class="expense-section hidden">
+                            <div class="personnel-header">
+                                <h3>Расходы на персонал</h3>
+                                <button class="btn btn--primary" onclick="addEmployee()">Добавить должность</button>
+                            </div>
+                            <div id="personnel-list" class="personnel-list">
+                                <!-- Сотрудники будут добавлены динамически -->
+                            </div>
+                        </div>
+                        
+                        <div id="marketing-expenses" class="expense-section hidden">
+                            <h3>Маркетинговые расходы</h3>
+                            <div class="expense-grid">
+                                <div class="expense-item">
+                                    <label>Реклама в интернете</label>
+                                    <input type="number" class="form-control" id="online-advertising" value="0" min="0" step="1000">
+                                </div>
+                                <div class="expense-item">
+                                    <label>Традиционная реклама</label>
+                                    <input type="number" class="form-control" id="offline-advertising" value="0" min="0" step="1000">
+                                </div>
+                                <div class="expense-item">
+                                    <label>PR и маркетинговые события</label>
+                                    <input type="number" class="form-control" id="pr-events" value="0" min="0" step="1000">
+                                </div>
+                                <div class="expense-item">
+                                    <label>Контент-маркетинг</label>
+                                    <input type="number" class="form-control" id="content-marketing" value="0" min="0" step="1000">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="capex-expenses" class="expense-section hidden">
+                            <h3>Капитальные расходы</h3>
+                            <div class="capex-header">
+                                <button class="btn btn--primary" onclick="addCapexItem()">Добавить инвестицию</button>
+                            </div>
+                            <div id="capex-list" class="capex-list">
+                                <!-- Капитальные расходы будут добавлены динамически -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Дашборд -->
+                <div id="dashboard-tab" class="tab-content hidden">
+                    <div class="dashboard-grid">
+                        <div class="metric-card">
+                            <h4>Выручка (12 мес.)</h4>
+                            <div class="metric-value" id="revenue-12m">0 ₽</div>
+                        </div>
+                        <div class="metric-card">
+                            <h4>EBITDA</h4>
+                            <div class="metric-value" id="ebitda-value">0 ₽</div>
+                        </div>
+                        <div class="metric-card">
+                            <h4>NPV</h4>
+                            <div class="metric-value" id="npv-value">0 ₽</div>
+                        </div>
+                        <div class="metric-card">
+                            <h4>IRR</h4>
+                            <div class="metric-value" id="irr-value">0%</div>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Срок окупаемости</h4>
+                            <div class="metric-value" id="payback-value">- мес.</div>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Точка безубыточности</h4>
+                            <div class="metric-value" id="breakeven-value">- мес.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="charts-grid">
+                        <div class="chart-container" style="position: relative; height: 400px;">
+                            <h4>Выручка и расходы по месяцам</h4>
+                            <canvas id="revenue-chart"></canvas>
+                        </div>
+                        <div class="chart-container" style="position: relative; height: 400px;">
+                            <h4>Накопленный денежный поток</h4>
+                            <canvas id="cashflow-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Отчеты -->
+                <div id="reports-tab" class="tab-content hidden">
+                    <div class="reports-header">
+                        <h3>Финансовые отчеты</h3>
+                        <div class="scenario-selector">
+                            <label>Сценарий:</label>
+                            <select class="form-control" id="scenario-select">
+                                <option value="base">Базовый</option>
+                                <option value="optimistic">Оптимистичный</option>
+                                <option value="pessimistic">Пессимистичный</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="reports-grid">
+                        <div class="report-section">
+                            <h4>Отчет о прибылях и убытках</h4>
+                            <div class="table-container">
+                                <table id="pnl-table" class="financial-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Показатель</th>
+                                            <th>Год 1</th>
+                                            <th>Год 2</th>
+                                            <th>Год 3</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Данные будут заполнены автоматически -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="report-section">
+                            <h4>Движение денежных средств</h4>
+                            <div class="table-container">
+                                <table id="cashflow-table" class="financial-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Показатель</th>
+                                            <th>Год 1</th>
+                                            <th>Год 2</th>
+                                            <th>Год 3</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Данные будут заполнены автоматически -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Модальные окна -->
+    <!-- Аутентификация -->
+    <div id="auth-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="auth-modal-title">Вход в систему</h3>
+                <button class="modal-close" onclick="closeModal('auth-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="auth-form">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="auth-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="auth-password" required>
+                    </div>
+                    <div id="register-fields" class="hidden">
+                        <div class="form-group">
+                            <label class="form-label">Подтвердите пароль</label>
+                            <input type="password" class="form-control" id="auth-password-confirm">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Имя</label>
+                            <input type="text" class="form-control" id="auth-name">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width" id="auth-submit">Войти</button>
+                </form>
+                <div class="auth-divider">
+                    <span>или</span>
+                </div>
+                <button class="btn btn--outline btn--full-width google-auth" onclick="googleAuth()">
+                    Войти через Google
+                </button>
+                <div class="auth-footer">
+                    <p id="auth-switch-text">
+                        Нет аккаунта? <a href="#" onclick="switchAuthMode()">Зарегистрироваться</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Обновление плана -->
+    <div id="upgrade-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Обновить тарифный план</h3>
+                <button class="modal-close" onclick="closeModal('upgrade-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upgrade-info">
+                    <p>Вы достигли лимита бесплатного плана. Обновите план для продолжения работы.</p>
+                    <div class="upgrade-options">
+                        <div class="upgrade-option">
+                            <h4>BASIC - 1990₽/месяц</h4>
+                            <ul>
+                                <li>Неограниченное количество моделей</li>
+                                <li>Экспорт в Excel и PowerPoint</li>
+                                <li>Приоритетная поддержка</li>
+                            </ul>
+                            <button class="btn btn--primary" onclick="upgradePlan('basic')">Выбрать BASIC</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экспорт -->
+    <div id="export-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Экспорт модели</h3>
+                <button class="modal-close" onclick="closeModal('export-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="export-options">
+                    <div class="export-option">
+                        <input type="radio" id="export-pdf" name="export-format" value="pdf" checked>
+                        <label for="export-pdf">
+                            <strong>PDF отчет</strong>
+                            <span>Презентабельный отчет с графиками</span>
+                        </label>
+                    </div>
+                    <div class="export-option" id="excel-option">
+                        <input type="radio" id="export-excel" name="export-format" value="excel">
+                        <label for="export-excel">
+                            <strong>Excel модель</strong>
+                            <span>Интерактивная модель с формулами (только BASIC+)</span>
+                        </label>
+                    </div>
+                    <div class="export-option" id="powerpoint-option">
+                        <input type="radio" id="export-powerpoint" name="export-format" value="powerpoint">
+                        <label for="export-powerpoint">
+                            <strong>PowerPoint презентация</strong>
+                            <span>Готовая презентация для инвесторов (только BASIC+)</span>
+                        </label>
+                    </div>
+                </div>
+                <button class="btn btn--primary btn--full-width" onclick="performExport()">
+                    Экспортировать
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

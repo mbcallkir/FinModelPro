@@ -57,8 +57,4 @@
   pretty_urls = true
 
 # Плагины Netlify
-[[plugins]]
-  package = "netlify-plugin-lighthouse"
-  
-  [plugins.inputs.audits]
-    output_path = "reports/lighthouse.html"
+

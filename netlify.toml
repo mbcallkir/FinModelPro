@@ -61,7 +61,4 @@
   package = "netlify-plugin-lighthouse"
   
   [plugins.inputs.audits]
-    performance = true
-    accessibility = true
-    best-practices = true
-    seo = true
+    output_path = "reports/lighthouse.html"

@@ -21,7 +21,8 @@
   "license": "MIT",
   "devDependencies": {
     "http-server": "^14.1.1",
-    "netlify-cli": "^17.10.1"
+    "netlify-cli": "^17.10.1",
+    "@netlify/plugin-lighthouse": "^5.0.0"
   },
   "dependencies": {
     "chart.js": "^4.4.0"

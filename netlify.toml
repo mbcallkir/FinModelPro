@@ -1,26 +1,67 @@
 # Настройки сборки
 [build]
-# Команда сборки 
- command = ""
-# Директория для публикации (корень проекта)
- publish = "."
+  # Команда сборки (для статического сайта не требуется)
+  command = ""
   
-# Настройки для разных контекстов развертывания
-[context.production.environment]
-NODE_ENV = "production"
-[context.deploy-preview.environment]
-NODE_ENV = "development"
+  # Директория для публикации (корень проекта)
+  publish = "."
 
 # Правила перенаправления для SPA
- [[redirects]]
- from = "/*"
- to = "/index.html"
- status = 200
-  
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Настройки для разных контекстов развертывания
+[context.production.environment]
+  NODE_ENV = "production"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "development"
+
 # Заголовки безопасности
 [[headers]]
-for = "/*"
-[headers.values]
-X-Frame-Options = "DENY"
-X-XSS-Protection = "1; mode=block"
-X-Content-Type-Options = "nosniff"
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Кэширование статических ресурсов
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+# Настройки форм (если понадобятся)
+[build.processing]
+  skip_processing = false
+[build.processing.css]
+  bundle = true
+  minify = true
+[build.processing.js]
+  bundle = true
+  minify = true
+[build.processing.html]
+  pretty_urls = true
+
+# Плагины Netlify
+[[plugins]]
+  package = "netlify-plugin-lighthouse"
+  
+  [plugins.inputs.audits]
+    performance = true
+    accessibility = true
+    best-practices = true
+    seo = true

@@ -1,0 +1,37 @@
+{
+  "name": "finmodel-pro",
+  "version": "1.0.0",
+  "description": "Профессиональная SaaS-платформа для интерактивного финансового моделирования",
+  "main": "app.js",
+  "scripts": {
+    "start": "npx http-server . -p 3000 -o",
+    "build": "echo 'Static site - no build needed'",
+    "dev": "npx http-server . -p 3000 -o --cors",
+    "deploy": "netlify deploy --prod",
+    "preview": "netlify deploy"
+  },
+  "keywords": [
+    "финансовое моделирование",
+    "стартапы",
+    "бизнес-планирование",
+    "SaaS",
+    "финтех"
+  ],
+  "author": "FinModel Pro Team",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "netlify-cli": "^17.10.1"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/finmodel-pro.git"
+  },
+  "homepage": "https://finmodel-pro.netlify.app",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
